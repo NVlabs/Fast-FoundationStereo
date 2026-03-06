@@ -9,3 +9,4 @@ cfg.yaml
 weights/*
 !weights/.gitkeep
 output/
+.claude/
