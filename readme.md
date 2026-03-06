@@ -33,11 +33,12 @@ docker build --network host -t ffs -f docker/dockerfile .
 bash docker/run_container.sh
 ```
 
-- Option 2: pip
+- Option 2: uv
 ```bash
-conda create -n ffs python=3.12 && conda activate ffs
-pip install torch==2.6.0 torchvision==0.21.0 xformers --index-url https://download.pytorch.org/whl/cu124
-pip install -r requirements.txt
+uv venv --python=3.12
+source .venv/bin/activate
+uv pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
+uv pip install -r requirements.txt
 ```
 
 
@@ -57,7 +58,7 @@ To trade-off speed and accuracy, there are two options:
 
 # Run demo
 ```
-python scripts/run_demo.py --model_dir weights/23-36-37/model_best_bp2_serialize.pth --left_file assets/left.png --right_file assets/right.png --intrinsic_file assets/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --scale 1 --get_pc 1 --valid_iters 8 --max_disp 192 --zfar 100
+python scripts/run_demo.py --model_dir weights/23-36-37/model_best_bp2_serialize.pth --left_file demo_data/left.png --right_file demo_data/right.png --intrinsic_file demo_data/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --scale 1 --get_pc 1 --valid_iters 4 --max_disp 192 --zfar 100
 ```
 | Flag                        | Meaning                                                                |
 |-----------------------------|------------------------------------------------------------------------|
@@ -102,7 +103,7 @@ Expect to see results like below:
 For TRT, we recommend first setup env in docker.
 
 ```
-python scripts/make_onnx.py --model_dir weights/23-36-37/model_best_bp2_serialize.pth --save_path output/ --height 448 --width 640 --valid_iters 8 --max_disp 192
+python scripts/make_onnx.py --model_dir weights/23-36-37/model_best_bp2_serialize.pth --save_path onnx_768_768/ --height 768 --width 768 --valid_iters 4 --max_disp 192
 ```
 
 | Flag              | Meaning                                                                  |
@@ -118,13 +119,18 @@ Refer to `scripts/make_onnx.py` for a comprehensive list of available flags.  Si
 
 Then convert from ONNX to TRT as below.
 ```
-trtexec --onnx=output/feature_runner.onnx --saveEngine=output/feature_runner.engine --fp16  --useCudaGraph
-trtexec --onnx=output/post_runner.onnx --saveEngine=output/post_runner.engine --fp16  --useCudaGraph
+trtexec --onnx=onnx_768_768/feature_runner.onnx --saveEngine=onnx_768_768/feature_runner.engine --fp16  --useCudaGraph
+trtexec --onnx=onnx_768_768/post_runner.onnx --saveEngine=onnx_768_768/post_runner.engine --fp16  --useCudaGraph
+```
+
+To run inference with ONNX:
+```
+python scripts/run_demo_onnx.py --onnx_dir onnx_768_768/ --left_file demo_data/left.png --right_file demo_data/right.png --intrinsic_file demo_data/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --scale 1 --get_pc 1  --zfar 100
 ```
 
 To use TRT for inference:
 ```
-python scripts/run_demo_tensorrt.py --onnx_dir output/ --left_file assets/left.png --right_file assets/right.png --intrinsic_file assets/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --get_pc 1 --zfar 100
+python scripts/run_demo_tensorrt.py --onnx_dir onnx_768_768/ --left_file demo_data/left.png --right_file demo_data/right.png --intrinsic_file demo_data/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --get_pc 1 --zfar 100
 ```
 
 # Internet-Scale Pseudo-Labeling
