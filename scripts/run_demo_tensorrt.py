@@ -27,6 +27,7 @@ if __name__=="__main__":
   parser.add_argument('--denoise_radius', type=float, default=0.03, help='radius to use for outlier removal')
   parser.add_argument('--get_pc', type=int, default=1, help='save point cloud output')
   parser.add_argument('--zfar', type=float, default=100, help="max depth to include in point cloud")
+  parser.add_argument('--image_size', type=int, nargs='+', default=[448, 640], help="image size, should match the image size used to generate the tensorrt engine")
   args = parser.parse_args()
 
   set_logging_format()
@@ -96,7 +97,7 @@ if __name__=="__main__":
       lines = f.readlines()
       K = np.array(list(map(float, lines[0].rstrip().split()))).astype(np.float32).reshape(3,3)
       baseline = float(lines[1])
-    K[:2] *= np.array([fx, fy])
+      K[:2] *= np.array([[fx], [fy]])
     depth = K[0,0]*baseline/disp
     np.save(f'{args.out_dir}/depth_meter.npy', depth)
     xyz_map = depth2xyzmap(depth, K)
