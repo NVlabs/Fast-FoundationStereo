@@ -26,7 +26,7 @@ RUN conda init bash &&\
     echo "conda activate my" >> ~/.bashrc &&\
     conda activate my &&\
     pip install uv &&\
-    uv pip install torch==2.6.0 torchvision==0.21.0 xformers --index-url https://download.pytorch.org/whl/cu124
+    uv pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu128
 
 COPY requirements.txt /tmp/requirements.txt
 RUN conda activate my &&\
