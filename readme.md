@@ -124,6 +124,17 @@ trtexec --onnx=output/feature_runner.onnx --saveEngine=output/feature_runner.eng
 trtexec --onnx=output/post_runner.onnx --saveEngine=output/post_runner.engine --fp16  --useCudaGraph
 ```
 
+### Benchmark note (Jetson Orin / nx01)
+
+We benchmarked `20-30-48` with `valid_iters=4` at `448x640` on Jetson Orin (`nx01`) using TensorRT FP16 and `--useCudaGraph`. `feature_runner` is nearly unchanged across `max_disp` settings, while `post_runner` becomes much faster when reducing `max_disp` from 192 to 64.
+
+| Config | feature GPU (ms) | feature Host (ms) | post GPU (ms) | post Host (ms) | total GPU (ms) | total Host (ms) | approx FPS |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `max_disp=192` | 18.93 | 23.13 | 87.75 | 90.48 | 106.68 | 113.61 | 8.8 |
+| `max_disp=64` | 18.91 | 23.10 | 48.11 | 51.14 | 67.03 | 74.24 | 13.5 |
+
+In this setup, lowering `max_disp` from 192 to 64 reduces end-to-end host latency by ~34.7% and increases throughput from ~8.8 FPS to ~13.5 FPS, with the gain coming almost entirely from `post_runner`.
+
 To use TRT for inference:
 ```
 python scripts/run_demo_tensorrt.py --onnx_dir output/ --left_file assets/left.png --right_file assets/right.png --intrinsic_file assets/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --get_pc 1 --zfar 100
