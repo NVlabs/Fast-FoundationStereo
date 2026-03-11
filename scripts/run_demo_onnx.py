@@ -2,7 +2,8 @@ import os, sys
 code_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(f'{code_dir}/../')
 from omegaconf import OmegaConf
-import argparse, logging, yaml, imageio
+import argparse, logging, yaml
+import imageio.v2 as imageio
 import numpy as np
 from Utils import (
     set_logging_format, set_seed, vis_disparity,

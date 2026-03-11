@@ -500,9 +500,17 @@ class OnnxRunner:
     # --- Post-processing ---
     post_inputs = dict(feat)
     post_inputs['gwc_volume'] = gwc_volume.numpy()
-    # Only pass tensors that the post model expects
-    post_in_names = {inp.name for inp in self.post_session.get_inputs()}
-    post_inputs = {k: v for k, v in post_inputs.items() if k in post_in_names}
+    # Cast each input to the dtype the post model actually expects
+    _ort_to_np = {
+        'tensor(float16)': np.float16,
+        'tensor(float)':   np.float32,
+        'tensor(double)':  np.float64,
+    }
+    post_inputs = {
+        inp.name: post_inputs[inp.name].astype(_ort_to_np.get(inp.type, np.float32))
+        for inp in self.post_session.get_inputs()
+        if inp.name in post_inputs
+    }
 
     out = self.post_session.run(None, post_inputs)
     disp = out[0]  # numpy array (B, 1, H, W)
