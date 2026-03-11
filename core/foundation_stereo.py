@@ -443,3 +443,67 @@ class TrtRunner(nn.Module):
     out = self.run_trt(self.post_engine, self.post_context, post_inputs)
     disp = out['disp']
     return disp
+
+
+class OnnxRunner:
+  """CPU-compatible inference runner using ONNX Runtime.
+
+  Mirrors TrtRunner but uses onnxruntime.InferenceSession instead of TensorRT
+  engines.  The GWC cost-volume computation that bridges the two models is
+  handled by the pure-PyTorch fallback (build_gwc_volume_optimized_pytorch1),
+  so no CUDA, Triton, or TensorRT installation is required.
+
+  NOTE: The ONNX models exported by scripts/make_onnx.py have *fixed* input
+  shapes (dynamic_axes are not set).  Passing images of a different size than
+  was used during export will raise a shape-mismatch error from ORT.
+  """
+
+  def __init__(self, args, feature_onnx_path, post_onnx_path):
+    try:
+      import onnxruntime as ort
+    except ImportError:
+      raise ImportError(
+          'onnxruntime is not installed. '
+          'Install it with:  pip install onnxruntime'
+      )
+    self.args = args
+    providers = ['CPUExecutionProvider']
+    self.feature_session = ort.InferenceSession(feature_onnx_path, providers=providers)
+    self.post_session    = ort.InferenceSession(post_onnx_path,    providers=providers)
+    self.cv_group = args.get('cv_group', 8)
+
+  @staticmethod
+  def _to_np(x):
+    """Convert a torch Tensor or array-like to a float32 numpy array."""
+    if isinstance(x, torch.Tensor):
+      return x.float().cpu().numpy()
+    return np.asarray(x, dtype=np.float32)
+
+  def forward(self, image1, image2):
+    # --- Feature extraction ---
+    feat_out_list = self.feature_session.run(
+        None, {'left': self._to_np(image1), 'right': self._to_np(image2)}
+    )
+    feat_names = [o.name for o in self.feature_session.get_outputs()]
+    feat = dict(zip(feat_names, feat_out_list))
+
+    # --- GWC cost-volume (pure PyTorch, CPU-compatible) ---
+    feat_l04 = torch.from_numpy(feat['features_left_04'])
+    feat_r04 = torch.from_numpy(feat['features_right_04'])
+    with torch.no_grad():
+      gwc_volume = build_gwc_volume_optimized_pytorch1(
+          feat_l04, feat_r04,
+          self.args.max_disp // 4, self.cv_group,
+          normalize=self.args.get('normalize', True),
+      )
+
+    # --- Post-processing ---
+    post_inputs = dict(feat)
+    post_inputs['gwc_volume'] = gwc_volume.numpy()
+    # Only pass tensors that the post model expects
+    post_in_names = {inp.name for inp in self.post_session.get_inputs()}
+    post_inputs = {k: v for k, v in post_inputs.items() if k in post_in_names}
+
+    out = self.post_session.run(None, post_inputs)
+    disp = out[0]  # numpy array (B, 1, H, W)
+    return disp
