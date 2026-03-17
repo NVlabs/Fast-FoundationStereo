@@ -59,7 +59,7 @@ To trade-off speed and accuracy, there are two options:
 
 # Run demo
 ```
-python scripts/run_demo.py --model_dir weights/23-36-37/model_best_bp2_serialize.pth --left_file assets/left.png --right_file assets/right.png --intrinsic_file assets/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --scale 1 --get_pc 1 --valid_iters 8 --max_disp 192 --zfar 100
+python scripts/run_demo.py --model_dir weights/23-36-37/model_best_bp2_serialize.pth --left_file demo_data/left.png --right_file demo_data/right.png --intrinsic_file demo_data/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --scale 1 --get_pc 1 --valid_iters 8 --max_disp 192 --zfar 100
 ```
 | Flag                        | Meaning                                                                |
 |-----------------------------|------------------------------------------------------------------------|
@@ -126,7 +126,7 @@ trtexec --onnx=output/post_runner.onnx --saveEngine=output/post_runner.engine --
 
 To use TRT for inference:
 ```
-python scripts/run_demo_tensorrt.py --onnx_dir output/ --left_file assets/left.png --right_file assets/right.png --intrinsic_file assets/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --get_pc 1 --zfar 100
+python scripts/run_demo_tensorrt.py --onnx_dir output/ --left_file demo_data/left.png --right_file demo_data/right.png --intrinsic_file demo_data/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --get_pc 1 --zfar 100
 ```
 
 # Internet-Scale Pseudo-Labeling
