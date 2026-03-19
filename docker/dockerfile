@@ -32,7 +32,14 @@ RUN conda init bash &&\
 COPY requirements.txt /tmp/requirements.txt
 RUN conda activate my &&\
     uv pip install -r /tmp/requirements.txt &&\
-    uv pip install onnxruntime-gpu onnx pycuda cuda-python tensorrt-cu12 tensorrt-lean-cu12 tensorrt-dispatch-cu12 nvidia-modelopt[torch] &&\
+    uv pip install onnxruntime-gpu onnx pycuda cuda-python tensorrt-cu12 tensorrt-lean-cu12 tensorrt-dispatch-cu12 "nvidia-modelopt" &&\
+    # NOTE: Nightly builds are pinned for RTX 5090/Blackwell (sm_120/CUDA 12.8) support.
+    # PyTorch removes old nightlies after a few weeks — if this build fails with a 404,
+    # update the date in the version strings to a recent nightly at:
+    # https://download.pytorch.org/whl/nightly/cu128
+    # Once stable PyTorch supports CUDA 12.8/Blackwell, switch to a stable release.
+    # nvidia-modelopt is installed without [torch] first to avoid it downgrading the nightly torch.
+    uv pip install "torch==2.12.0.dev20260317+cu128" "torchvision==0.26.0.dev20260317+cu128" --index-url https://download.pytorch.org/whl/nightly/cu128 &&\
     conda install -y -c anaconda h5py &&\
     conda install -y -c conda-forge libstdcxx-ng
 
