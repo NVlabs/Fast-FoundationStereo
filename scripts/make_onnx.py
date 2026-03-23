@@ -81,4 +81,6 @@ if __name__ == '__main__':
     )
 
     with open(f'{args.save_path}/onnx.yaml', 'w') as f:
-      yaml.safe_dump(OmegaConf.to_container(model.args), f)
+      cfg = OmegaConf.to_container(model.args)
+      cfg['image_size'] = [args.height, args.width]
+      yaml.safe_dump(cfg, f)

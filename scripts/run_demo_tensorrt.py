@@ -33,7 +33,11 @@ if __name__=="__main__":
   set_seed(0)
   torch.autograd.set_grad_enabled(False)
 
-  os.system(f'rm -rf {args.out_dir} && mkdir -p {args.out_dir}')
+  out_dir_abs = os.path.realpath(os.path.abspath(args.out_dir))
+  onnx_dir_abs = os.path.realpath(os.path.abspath(args.onnx_dir))
+  if out_dir_abs != onnx_dir_abs and not onnx_dir_abs.startswith(out_dir_abs + os.sep):
+    os.system(f'rm -rf {args.out_dir}')
+  os.makedirs(args.out_dir, exist_ok=True)
 
   with open(f'{os.path.dirname(args.onnx_dir)}/onnx.yaml', 'r') as ff:
     cfg:dict = yaml.safe_load(ff)
@@ -96,7 +100,7 @@ if __name__=="__main__":
       lines = f.readlines()
       K = np.array(list(map(float, lines[0].rstrip().split()))).astype(np.float32).reshape(3,3)
       baseline = float(lines[1])
-    K[:2] *= np.array([fx, fy])
+    K[:2] *= np.array([fx, fy], dtype=np.float32)[:, np.newaxis]
     depth = K[0,0]*baseline/disp
     np.save(f'{args.out_dir}/depth_meter.npy', depth)
     xyz_map = depth2xyzmap(depth, K)
