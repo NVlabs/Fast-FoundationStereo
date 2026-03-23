@@ -4,7 +4,7 @@ ENV TZ=US/Pacific
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get update --fix-missing && \
-    apt-get install -y apt-utils build-essential ca-certificates cmake curl ffmpeg git libturbojpeg-dev pkg-config wget libnvinfer10 libnvinfer-plugin10 libnvonnxparsers10 libnvinfer-dispatch10 libnvinfer-bin zstd && \
+    apt-get install -y apt-utils build-essential ca-certificates cmake curl ffmpeg git libturbojpeg-dev pkg-config wget libnvinfer10 libnvinfer-plugin10 libnvonnxparsers10 libnvinfer-dispatch10 libnvinfer-bin zstd libx11-xcb1 libxcb-xinerama0 libxcb-icccm4 libxcb-render-util0 libxcb-shape0 libxcb-keysyms1 libxcb-image0 libxkbcommon-x11-0 libxcb-cursor0 libxcb-xkb1 libxcb-render0 libxcb-shm0 libxcb-sync1 libxcb-xfixes0 libxcb-randr0 libxcb-xtest0 libsm6 libxext6 libxkbcommon0 && \
     rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "--login", "-c"]
@@ -19,7 +19,7 @@ RUN cd / && wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-L
     /opt/conda/bin/conda update -n base -c defaults conda -y &&\
     /opt/conda/bin/conda create -n my python=3.12
 
-ENV PATH $PATH:/opt/conda/envs/my/bin
+ENV PATH=$PATH:/opt/conda/envs/my/bin
 ENV OPENCV_IO_ENABLE_OPENEXR=1
 
 RUN conda init bash &&\
