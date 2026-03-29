@@ -12,3 +12,4 @@ weights/*
 !weights/.gitkeep
 output/
 .claude/
+*.ply

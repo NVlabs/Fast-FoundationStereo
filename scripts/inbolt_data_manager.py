@@ -59,7 +59,7 @@ class DataSource:
         self.gray_scale_input = gray_scale_input
         self.imgs = []
 
-        IGNORED_SESSIONS = {'dataset_y16_freedrive'} #, 'dataset_y8_freedrive'}
+        IGNORED_SESSIONS = {'dataset_y16_freedrive', 'dataset_y8_freedrive'}
 
         # Each immediate sub-directory is a session
         try:
@@ -83,18 +83,20 @@ class DataSource:
             # Find all left images; match by index folder name
             left_paths = sorted(glob.glob(os.path.join(rs_root, '*', 'mono0.png')))
             for left_path in left_paths:
-                idx        = os.path.basename(os.path.dirname(left_path))
-                right_path = os.path.join(rs_root, idx, 'mono1.png')
-                depth_path = os.path.join(zivid_root, idx, 'depthmap_mm.png')
-                rgb_path   = os.path.join(zivid_root, idx, 'color.png')
+                idx             = os.path.basename(os.path.dirname(left_path))
+                right_path      = os.path.join(rs_root, idx, 'mono1.png')
+                depth_rs_path    = os.path.join(rs_root, idx, 'depthmap_mm.png')
+                depth_zivid_path = os.path.join(zivid_root, idx, 'depthmap_mm.png')
+                rgb_path        = os.path.join(zivid_root, idx, 'color.png')
 
-                if not os.path.isfile(right_path) or not os.path.isfile(depth_path):
+                if not os.path.isfile(depth_rs_path) or not os.path.isfile(depth_zivid_path):
                     continue  # skip incomplete samples
 
                 self.imgs.append({
                     'left':  left_path,
                     'right': right_path,
-                    'depth': depth_path,
+                    'depth_rs': depth_rs_path,
+                    'depth_zivid': depth_zivid_path,
                     'rgb':   rgb_path if os.path.isfile(rgb_path) else None,
                 })
 
@@ -106,19 +108,20 @@ class DataSource:
 
     def get_item(self, index: int, debug: bool = False):
         """Return one sample as a dict with left, right, depth_faro, depth_rs, rgb."""
-        output_str = {"left": [], "right": [], "depth_faro": [], "depth_rs": [], "rgb": []}
+        output_str = {"left": [], "right": [], "depth_zivid": [], "depth_rs": [], "rgb": []}
 
         entry = self.imgs[index]
 
         left_img  = cv2.imread(entry['left'],  cv2.IMREAD_UNCHANGED)
         right_img = cv2.imread(entry['right'], cv2.IMREAD_UNCHANGED)
-        depth_img = cv2.imread(entry['depth'], cv2.IMREAD_UNCHANGED)
+        depth_rs_img = cv2.imread(entry['depth_rs'], cv2.IMREAD_UNCHANGED)
+        depth_zivid_img = cv2.imread(entry['depth_zivid'], cv2.IMREAD_UNCHANGED)
 
-        if left_img is None or right_img is None or depth_img is None:
+        if left_img is None or right_img is None or depth_rs_img is None or depth_zivid_img is None:
             log.warning(f"Failed to load sample {index}: {entry}")
             return output_str
 
-        depth_img = depth_img.astype(np.float32)   # uint16 mm → float32 mm
+        
 
         rgb_img = np.array([], dtype=np.uint8)
         if entry['rgb'] is not None:
@@ -126,17 +129,18 @@ class DataSource:
             if rgb_img is None:
                 rgb_img = np.array([], dtype=np.uint8)
 
-        depth_rs = np.zeros_like(depth_img, dtype=np.float32)
+        depth_rs = depth_rs_img.astype(np.float32)
+        depth_zivid = depth_zivid_img.astype(np.float32)   # uint16 mm → float32 mm
 
         output_str["left"]       = left_img
         output_str["right"]      = right_img
-        output_str["depth_faro"] = depth_img   # Zivid GT
+        output_str["depth_zivid"] = depth_zivid   # Zivid GT
         output_str["depth_rs"]   = depth_rs
         output_str["rgb"]        = rgb_img
 
         if debug:
-            img_list = [left_img, right_img, depth_img]
-            ttl_list = ['left (RS)', 'right (RS)', 'depth Zivid (mm)']
+            img_list = [left_img, right_img, depth_rs, depth_zivid]
+            ttl_list = ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth Zivid (mm)']
             if rgb_img.size > 0:
                 img_list.append(rgb_img)
                 ttl_list.append('rgb (Zivid)')
@@ -179,7 +183,7 @@ class DataSource:
         paths = {
             "img_left.png":        output_str["left"],
             "img_right.png":       output_str["right"],
-            "img_depth_faro.png":  output_str["depth_faro"].astype(np.uint16),
+            "img_depth_zivid.png": output_str["depth_zivid"].astype(np.uint16),
             "img_depth_rs.png":    output_str["depth_rs"].astype(np.uint16),
         }
         success = True
@@ -220,8 +224,8 @@ class TestDataSource(unittest.TestCase):
         for k in np.random.randint(0, img_num, size=min(4, img_num)):
             out = p.get_item(int(k), debug=True)
             self.assertTrue(len(out["left"]) > 0)
-            p.show_subset([out["left"], out["right"], out["depth_faro"], out["depth_rs"], out["rgb"]],
-                          ['left (RS)', 'right (RS)', 'depth Faro (mm)', 'depth RS (mm)', 'rgb (Zivid)'])
+            p.show_subset([out["left"], out["right"], out["depth_zivid"], out["depth_rs"], out["rgb"]],
+                          ['left (RS)', 'right (RS)', 'depth Zivid (mm)', 'depth RS (mm)', 'rgb (Zivid)'])
 
         plt.show()
 

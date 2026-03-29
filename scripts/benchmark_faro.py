@@ -41,8 +41,8 @@ from report import ReportGenerator
 FARO_DIR       = r'/mnt/algonas/Local/Data/Stereo/Faro/FARO_DATA_BASE'
 #FARO_DIR       = r'data/faro'  # local path to FARO dataset --- IGNORE ---
 ORIGINAL_PATH  = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
-FINETUNED_PATH = f'{code_dir}/../weights/20-30-48/model_finetuned_faro.pth'
-DEFAULT_OUT    = f'{code_dir}/../reports/faro_benchmark'
+FINETUNED_PATH = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
+DEFAULT_OUT    = f'{code_dir}/../reports/faro_benchmark_office'
 
 BF     = 49470.45   # focal_px * baseline_mm  (calibrated from camera)
 ITERS  = 8          # GRU iterations
@@ -123,7 +123,7 @@ def main():
 
     # ── dataset ───────────────────────────────────────────────────────────────
     source = DataSource()
-    n = source.init_directory(input_rectified=args.faro_dir)
+    n = source.init_directory(input_rectified=args.faro_dir,test_keywords=['OFFICE'], split='train')
     logging.info(f"Found {n} samples in {args.faro_dir}")
     if n == 0:
         logging.error("No samples found — check FARO_DIR path")
