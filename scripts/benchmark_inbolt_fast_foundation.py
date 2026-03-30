@@ -25,8 +25,8 @@ sys.path.append(code_dir)
 
 import numpy as np
 import torch
-import matplotlib
-matplotlib.use('Agg')
+#import matplotlib
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from core.utils.utils import InputPadder
@@ -46,8 +46,8 @@ from report import ReportGenerator
 
 
 # ── constants ────────────────────────────────────────────────────────────────
-
-DATA_DIR         = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection'  # local path to the dataset
+DATA_DIR         = r'C:\Work\Data\Depth\Data Collection'  # local path to the dataset
+#DATA_DIR         = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection'  # local path to the dataset
 MODEL_PATH      = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
 FINETUNED_PATH  = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
 DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark'
@@ -113,58 +113,81 @@ def save_to_ply(points: np.ndarray, filename: str):
         for x, y, z in points:
             f.write(f'{x} {y} {z}\n')
 
-# project from zivid depth patrix to point cloud and back to depth matrix with rs intrinsics and distortion to get "zivid GT as seen by RealSense" for pixel-level comparison
-def project_depth_zivid_to_rs(depth_zivid_mm: np.ndarray, depth_rs_mm: np.ndarray, finx = 0) -> np.ndarray:
-    h, w = depth_zivid_mm.shape
+def project_camera_to_3d(depth_img_mm: np.ndarray, cam_matrix: np.ndarray, dist_coeffs: np.ndarray) -> np.ndarray:
+    """Project 2D pixel coordinates with depth to 3D points in camera space."""
+    h, w = depth_img_mm.shape
     xs, ys = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32), indexing='xy')
 
     # OpenCV expects Nx1x2 contiguous float32/float64 image points in (x, y) order.
     distorted_points = np.stack([xs, ys], axis=-1).reshape(-1, 1, 2).astype(np.float32)
-    undistorted_points = cv2.undistortPoints(distorted_points,  CAMERA_MATRIX_ZIVID.astype(np.float32),  DIST_COEFFS_ZIVID.astype(np.float32) )
+    undistorted_points = cv2.undistortPoints(distorted_points,  cam_matrix.astype(np.float32),  dist_coeffs.astype(np.float32) )
 
     uv = undistorted_points.reshape(-1, 2)
-    Z = depth_zivid_mm.reshape(-1).astype(np.float32)
+    Z = depth_img_mm.reshape(-1).astype(np.float32)
     valid = np.isfinite(Z) & (Z > 0)
     if not np.any(valid):
-        return np.zeros_like(depth_rs_mm, dtype=np.float32)
+        return np.zeros((0, 3), dtype=np.float32)
 
-    uv = uv[valid]
-    Z = Z[valid]
-    X = uv[:, 0] * Z
-    Y = uv[:, 1] * Z
+    uv      = uv[valid]
+    Z       = Z[valid]
+    X       = uv[:, 0] * Z
+    Y       = uv[:, 1] * Z
 
     # save to ply point cloud for visualization
-    XYZ = np.stack([X, Y, Z], axis=1).astype(np.float32)
-    #save_to_ply(XYZ, f'zivid_points_{finx:03d}.ply')
+    XYZ     = np.stack([X, Y, Z], axis=1).astype(np.float32)
 
+    return XYZ
+
+def project_3d_to_camera(points_3d: np.ndarray, cam_matrix: np.ndarray, dist_coeffs: np.ndarray, frame_size = (480,640)) -> np.ndarray:
+    """Project 3D points in camera space back to 2D pixel coordinates."""
+    if points_3d.shape[1] != 3:
+        raise ValueError("Input points_3d must have shape (N, 3)")
     projected_pts, _ = cv2.projectPoints(
-        XYZ.reshape(-1, 1, 3),
+        points_3d.reshape(-1, 1, 3),
         np.zeros(3, dtype=np.float32),
         np.zeros(3, dtype=np.float32),
-        CAMERA_MATRIX_RS.astype(np.float32),
-        DIST_COEFFS_RS.astype(np.float32),
+        cam_matrix.astype(np.float32),
+        dist_coeffs.astype(np.float32),
     )
 
     uv_rs = projected_pts.reshape(-1, 2)
     u_idx = np.rint(uv_rs[:, 0]).astype(np.int32)
     v_idx = np.rint(uv_rs[:, 1]).astype(np.int32)
 
-    h_rs, w_rs = depth_rs_mm.shape
+    h_rs, w_rs = frame_size
     in_bounds = (u_idx >= 0) & (u_idx < w_rs) & (v_idx >= 0) & (v_idx < h_rs)
     if not np.any(in_bounds):
         return np.zeros((h_rs, w_rs), dtype=np.float32)
 
     u_idx = u_idx[in_bounds]
     v_idx = v_idx[in_bounds]
-    z_vals = Z[in_bounds]
+    z_vals = points_3d[in_bounds, 2]  # Z values of the valid points
 
     # Rasterize by nearest pixel; if multiple points hit a pixel, keep the closest depth.
-    lin = v_idx * w_rs + u_idx
-    depth_buffer = np.full(h_rs * w_rs, np.inf, dtype=np.float32)
+    lin             = v_idx * w_rs + u_idx
+    depth_buffer    = np.full(h_rs * w_rs, np.inf, dtype=np.float32)
     np.minimum.at(depth_buffer, lin, z_vals)
-    depth_zivid_projected = depth_buffer.reshape(h_rs, w_rs)
-    depth_zivid_projected[~np.isfinite(depth_zivid_projected)] = 0.0
-    return depth_zivid_projected
+    depth_projected = depth_buffer.reshape(h_rs, w_rs)
+    depth_projected[~np.isfinite(depth_projected)] = 0.0
+    return depth_projected
+
+
+
+# project from zivid depth patrix to point cloud and back to depth matrix with rs intrinsics and distortion to get "zivid GT as seen by RealSense" for pixel-level comparison
+def project_depth_zivid_to_rs(depth_zivid_mm: np.ndarray, depth_rs_mm: np.ndarray, finx = 0) -> np.ndarray:
+    # create 3D point cloud from zivid depth
+    XYZ = project_camera_to_3d(depth_zivid_mm, CAMERA_MATRIX_ZIVID, DIST_COEFFS_ZIVID)  # (N, 3) array of 3D points in Zivid camera space
+    # save to ply point cloud for visualization
+    save_to_ply(XYZ/1000, f'zivid_original_points_{finx:03d}.ply') # save in meters for visualization
+
+    # project back on imaage RS
+    depth_zivid_projected_mm = project_3d_to_camera(XYZ, CAMERA_MATRIX_RS, DIST_COEFFS_RS, frame_size = depth_rs_mm.shape)  # (H, W) depth map of Zivid points projected into RealSense pixel space
+
+    XYZ_RS = project_camera_to_3d(depth_zivid_projected_mm, CAMERA_MATRIX_RS, DIST_COEFFS_RS) 
+        # save to ply point cloud for visualization
+    save_to_ply(XYZ_RS/1000, f'zivid_projected_points_{finx:03d}.ply') # save in meters for visualization
+
+    return depth_zivid_projected_mm
 
 # ── depth-vs-distance analysis ────────────────────────────────────────────────
 
@@ -661,16 +684,20 @@ def main_inbolt_graphs_with_projection():
         rs_mm = data['depth_rs'].astype(np.float32)   # RealSense depth in mm
 
         # project zivid on rs
-        zv_mm = project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
+        zv_prj_mm          = project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
 
-        #rs_valid           = (rs_mm > rs_mm.max()*0.8) 
-        zv_valid           = (zv_mm > zv_mm.max()*0.1) 
+        rs_valid           = (10 < rs_mm) 
+        rs_valid           = rs_valid & (rs_mm < rs_mm[rs_valid].min()*1.2) 
+        zv_valid           = (10 < zv_prj_mm) 
+        zv_valid           = zv_valid & (zv_prj_mm < zv_prj_mm[zv_valid].min()*1.2) & rs_valid
         if idx == 0:
             rs_ref = rs_mm
-            zv_ref = zv_mm
+            zv_ref = zv_prj_mm
         else:
-            rs_depth_diff[idx] = np.nanmean(rs_mm[zv_valid] - rs_ref[zv_valid])
-            zv_depth_diff[idx] = np.nanmean(zv_mm[zv_valid] - zv_ref[zv_valid])
+            rs_diff = rs_mm[zv_valid] - rs_ref[zv_valid]
+            zv_diff = zv_prj_mm[zv_valid] - zv_ref[zv_valid]
+            rs_depth_diff[idx] = np.mean(rs_diff)
+            zv_depth_diff[idx] = np.mean(zv_diff)
 
 
     sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, zv_depth_diff)

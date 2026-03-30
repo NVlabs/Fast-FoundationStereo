@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 from typing import Dict, List
 
-import matplotlib
-matplotlib.use("Agg")  # headless — must be before pyplot import
+# import matplotlib
+# matplotlib.use("Agg")  # headless — must be before pyplot import
 import matplotlib.pyplot as plt
 import numpy as np
 
