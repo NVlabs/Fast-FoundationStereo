@@ -171,8 +171,6 @@ def project_3d_to_camera(points_3d: np.ndarray, cam_matrix: np.ndarray, dist_coe
     depth_projected[~np.isfinite(depth_projected)] = 0.0
     return depth_projected
 
-
-
 # project from zivid depth patrix to point cloud and back to depth matrix with rs intrinsics and distortion to get "zivid GT as seen by RealSense" for pixel-level comparison
 def project_depth_zivid_to_rs(depth_zivid_mm: np.ndarray, depth_rs_mm: np.ndarray, finx = 0) -> np.ndarray:
     # create 3D point cloud from zivid depth

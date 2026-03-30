@@ -39,6 +39,35 @@ import unittest
 import logging as log
 import yaml
 
+# --------------------------------
+
+CAMERA_MATRIX_RS = np.array([
+    [385.7338562011719, 0, 320.17578125],
+    [0, 385.7338562011719, 245.1015167236328],
+    [0, 0, 1]
+])
+
+DIST_COEFFS_RS = np.array([
+    0.0,
+    -0.0,
+    -0.0,
+    0.0,
+    -0.0
+])
+
+CAMERA_MATRIX_ZIVID = np.array([
+    [1240.27099609375, 0, 604.5339927697801],
+    [0, 1240.2381591796875, 505.60805553154046],
+    [0, 0, 1]
+])
+DIST_COEFFS_ZIVID = np.array([
+    0.045981280505657196,
+    -0.0316404290497303,
+    -0.00012756904470734298,
+    0.0001183780113933608,
+    -0.17966397106647491
+])
+
 
 # --------------------------------
 #%% Data source
@@ -127,8 +156,6 @@ class DataSource:
             log.warning(f"Failed to load sample {index}: {entry}")
             return output_str
 
-        
-
         rgb_img = np.array([], dtype=np.uint8)
         if entry['rgb'] is not None:
             rgb_img = cv2.imread(entry['rgb'], cv2.IMREAD_COLOR)
@@ -165,6 +192,65 @@ class DataSource:
             self.show_subset(img_list, ttl_list)
 
         return output_str
+    
+    def get_item_projected(self, index: int, debug: bool = False):
+        """Return one sample as a dict with left, right, depth_faro, depth_rs, rgb."""
+        output_str = {"left": [], "right": [], "depth_zivid": [], "depth_rs": [], "rgb": [], "metadata_rs": None, "metadata_zv": None}
+
+        entry           = self.imgs[index]
+
+        left_img        = cv2.imread(entry['left'],  cv2.IMREAD_UNCHANGED)
+        right_img       = cv2.imread(entry['right'], cv2.IMREAD_UNCHANGED)
+        depth_rs_img    = cv2.imread(entry['depth_rs'], cv2.IMREAD_UNCHANGED)
+        depth_zivid_img = cv2.imread(entry['depth_zivid'], cv2.IMREAD_UNCHANGED)
+
+        if left_img is None or right_img is None or depth_rs_img is None or depth_zivid_img is None:
+            log.warning(f"Failed to load sample {index}: {entry}")
+            return output_str
+
+        rgb_img = np.array([], dtype=np.uint8)
+        if entry['rgb'] is not None:
+            rgb_img = cv2.imread(entry['rgb'], cv2.IMREAD_COLOR)
+            if rgb_img is None:
+                rgb_img = np.array([], dtype=np.uint8)
+
+        depth_rs    = depth_rs_img.astype(np.float32)
+        depth_zivid = depth_zivid_img.astype(np.float32)   # uint16 mm → float32 mm
+
+        zivid_projected_path = entry['depth_zivid'].replace('.png', '_projected.png')  # for debug visualization of projected depth maps
+        if os.path.exists(zivid_projected_path):
+            depth_zivid_projected = cv2.imread(zivid_projected_path, cv2.IMREAD_UNCHANGED).astype(np.float32)
+        else:
+            depth_zivid_projected  = self.project_depth_zivid_to_rs(depth_zivid, depth_rs, finx = index)
+            cv2.imwrite(zivid_projected_path, depth_zivid_projected.astype(np.uint16), [cv2.IMWRITE_PNG_COMPRESSION, 0])  # save projected depth for visualization  
+
+        metadata_rs = None
+        if entry.get('metadata_rs') is not None:
+            with open(entry['metadata_rs'], 'r') as f:
+                metadata_rs = yaml.safe_load(f)
+
+        metadata_zv = None
+        if entry.get('metadata_zv') is not None:
+            with open(entry['metadata_zv'], 'r') as f:
+                metadata_zv = yaml.safe_load(f)
+
+        output_str["left"]        = left_img
+        output_str["right"]       = right_img
+        output_str["depth_zivid"] = depth_zivid_projected   # Zivid GT
+        output_str["depth_rs"]    = depth_rs
+        output_str["rgb"]         = rgb_img
+        output_str["metadata_rs"] = metadata_rs
+        output_str["metadata_zv"] = metadata_zv
+
+        if debug:
+            img_list = [left_img, right_img, depth_rs, depth_zivid]
+            ttl_list = ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth Zivid (mm)']
+            if rgb_img.size > 0:
+                img_list.append(rgb_img)
+                ttl_list.append('rgb (Zivid)')
+            self.show_subset(img_list, ttl_list)
+
+        return output_str    
 
     def compute_depth_error(self, depth_pred, depth_gt, depth_mask=None):
         """Compute absolute depth error between prediction and GT."""
@@ -215,6 +301,103 @@ class DataSource:
                         output_str["rgb"], [cv2.IMWRITE_PNG_COMPRESSION, 0])
 
         return success
+    
+
+    def save_to_ply(self, points: np.ndarray, filename: str):
+        """Save a point cloud to a PLY file for visualization."""
+        with open(filename, 'w') as f:
+            f.write('ply\n')
+            f.write('format ascii 1.0\n')
+            f.write(f'element vertex {len(points)}\n')
+            f.write('property float x\n')
+            f.write('property float y\n')
+            f.write('property float z\n')
+            f.write('end_header\n')
+            for x, y, z in points:
+                f.write(f'{x} {y} {z}\n')
+
+    def project_camera_to_3d(self, depth_img_mm: np.ndarray, cam_matrix: np.ndarray, dist_coeffs: np.ndarray) -> np.ndarray:
+        """Project 2D pixel coordinates with depth to 3D points in camera space."""
+        h, w = depth_img_mm.shape
+        xs, ys = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32), indexing='xy')
+
+        # OpenCV expects Nx1x2 contiguous float32/float64 image points in (x, y) order.
+        distorted_points = np.stack([xs, ys], axis=-1).reshape(-1, 1, 2).astype(np.float32)
+        undistorted_points = cv2.undistortPoints(distorted_points,  cam_matrix.astype(np.float32),  dist_coeffs.astype(np.float32) )
+
+        uv = undistorted_points.reshape(-1, 2)
+        Z = depth_img_mm.reshape(-1).astype(np.float32)
+        valid = np.isfinite(Z) & (Z > 0)
+        if not np.any(valid):
+            return np.zeros((0, 3), dtype=np.float32)
+
+        uv      = uv[valid]
+        Z       = Z[valid]
+        X       = uv[:, 0] * Z
+        Y       = uv[:, 1] * Z
+
+        # save to ply point cloud for visualization
+        XYZ     = np.stack([X, Y, Z], axis=1).astype(np.float32)
+
+        return XYZ
+
+    def project_3d_to_camera(self, points_3d: np.ndarray, cam_matrix: np.ndarray, dist_coeffs: np.ndarray, frame_size = (480,640)) -> np.ndarray:
+        """Project 3D points in camera space back to 2D pixel coordinates."""
+        if points_3d.shape[1] != 3:
+            raise ValueError("Input points_3d must have shape (N, 3)")
+        projected_pts, _ = cv2.projectPoints(
+            points_3d.reshape(-1, 1, 3),
+            np.zeros(3, dtype=np.float32),
+            np.zeros(3, dtype=np.float32),
+            cam_matrix.astype(np.float32),
+            dist_coeffs.astype(np.float32),
+        )
+
+        uv_rs = projected_pts.reshape(-1, 2)
+        u_idx = np.rint(uv_rs[:, 0]).astype(np.int32)
+        v_idx = np.rint(uv_rs[:, 1]).astype(np.int32)
+
+        h_rs, w_rs = frame_size
+        in_bounds = (u_idx >= 0) & (u_idx < w_rs) & (v_idx >= 0) & (v_idx < h_rs)
+        if not np.any(in_bounds):
+            return np.zeros((h_rs, w_rs), dtype=np.float32)
+
+        u_idx = u_idx[in_bounds]
+        v_idx = v_idx[in_bounds]
+        z_vals = points_3d[in_bounds, 2]  # Z values of the valid points
+
+        # Rasterize by nearest pixel; if multiple points hit a pixel, keep the closest depth.
+        lin             = v_idx * w_rs + u_idx
+        depth_buffer    = np.full(h_rs * w_rs, np.inf, dtype=np.float32)
+        np.minimum.at(depth_buffer, lin, z_vals)
+        depth_projected = depth_buffer.reshape(h_rs, w_rs)
+        depth_projected[~np.isfinite(depth_projected)] = 0.0
+        return depth_projected
+
+    # project from zivid depth patrix to point cloud and back to depth matrix with rs intrinsics and distortion to get "zivid GT as seen by RealSense" for pixel-level comparison
+    def project_depth_zivid_to_rs(self,depth_zivid_mm: np.ndarray, depth_rs_mm: np.ndarray, finx = 0) -> np.ndarray:
+        # create 3D point cloud from zivid depth
+        XYZ = self.project_camera_to_3d(depth_zivid_mm, CAMERA_MATRIX_ZIVID, DIST_COEFFS_ZIVID)  # (N, 3) array of 3D points in Zivid camera space
+        # save to ply point cloud for visualization
+        #save_to_ply(XYZ/1000, f'zivid_original_points_{finx:03d}.ply') # save in meters for visualization
+
+        # project back on imaage RS
+        depth_zivid_projected_mm = self.project_3d_to_camera(XYZ, CAMERA_MATRIX_RS, DIST_COEFFS_RS, frame_size = depth_rs_mm.shape)  # (H, W) depth map of Zivid points projected into RealSense pixel space
+
+        XYZ_RS = self.project_camera_to_3d(depth_zivid_projected_mm, CAMERA_MATRIX_RS, DIST_COEFFS_RS)
+            # save to ply point cloud for visualization
+        #save_to_ply(XYZ_RS/1000, f'zivid_projected_points_{finx:03d}.ply') # save in meters for visualization
+
+        return depth_zivid_projected_mm    
+    
+    def show_projection(self, rs_map, zv_map, zv_valid, idx):
+        fig, axes = plt.subplots(1, 3, sharey=True, sharex=True, figsize=(8,4))
+        axes[0].imshow(rs_map, vmin=-10, vmax=1000),axes[0].set_title(f"RealSense Depth Diff (mm)"),
+        axes[1].imshow(zv_map, vmin=-10, vmax=1000),axes[1].set_title(f"Zivid Projected Depth Diff (mm)"),
+        axes[2].imshow(zv_valid, cmap='gray'),axes[2].set_title(f"Valid Mask (Zivid Projection)"),
+        plt.suptitle(f"Sample {idx:03d} Depth Difference Maps and Valid Mask", fontsize=16)
+        plt.tight_layout()
+        plt.show()
 
 
 # --------------------------------
@@ -247,13 +430,24 @@ class TestDataSource(unittest.TestCase):
 
         plt.show()
 
+    def test_get_item_projected(self):
+        p       = DataSource()
+        img_num = p.init_directory(r'C:\Work\Data\Depth\Data Collection')
+        self.assertTrue(img_num > 0)
+        out = p.get_item_projected(0, debug=True)
+        self.assertTrue(len(out["left"]) > 0)
+        p.show_subset([out["left"], out["right"], out["depth_zivid"], out["depth_rs"]],
+                          ['left (RS)', 'right (RS)', 'depth Zivid (mm)', 'depth RS (mm)'])
+        plt.show()
+
 
 # --------------------------------
 #%% Run Test
 def RunTest():
     tst = TestDataSource()
     #tst.test_get_item()
-    tst.test_show_images()
+    #tst.test_show_images()
+    tst.test_get_item_projected()
 
 
 if __name__ == '__main__':
