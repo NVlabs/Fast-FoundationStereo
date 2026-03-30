@@ -46,8 +46,8 @@ from report import ReportGenerator
 
 
 # ── constants ────────────────────────────────────────────────────────────────
-DATA_DIR         = r'C:\Work\Data\Depth\Data Collection'  # local path to the dataset
-#DATA_DIR         = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection'  # local path to the dataset
+#DATA_DIR         = r'C:\Work\Data\Depth\Data Collection'  # local path to the dataset
+DATA_DIR         = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection'  # local path to the dataset
 MODEL_PATH      = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
 FINETUNED_PATH  = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
 DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark'
@@ -178,34 +178,18 @@ def project_depth_zivid_to_rs(depth_zivid_mm: np.ndarray, depth_rs_mm: np.ndarra
     # create 3D point cloud from zivid depth
     XYZ = project_camera_to_3d(depth_zivid_mm, CAMERA_MATRIX_ZIVID, DIST_COEFFS_ZIVID)  # (N, 3) array of 3D points in Zivid camera space
     # save to ply point cloud for visualization
-    save_to_ply(XYZ/1000, f'zivid_original_points_{finx:03d}.ply') # save in meters for visualization
+    #save_to_ply(XYZ/1000, f'zivid_original_points_{finx:03d}.ply') # save in meters for visualization
 
     # project back on imaage RS
     depth_zivid_projected_mm = project_3d_to_camera(XYZ, CAMERA_MATRIX_RS, DIST_COEFFS_RS, frame_size = depth_rs_mm.shape)  # (H, W) depth map of Zivid points projected into RealSense pixel space
 
     XYZ_RS = project_camera_to_3d(depth_zivid_projected_mm, CAMERA_MATRIX_RS, DIST_COEFFS_RS)
         # save to ply point cloud for visualization
-    save_to_ply(XYZ_RS/1000, f'zivid_projected_points_{finx:03d}.ply') # save in meters for visualization
+    #save_to_ply(XYZ_RS/1000, f'zivid_projected_points_{finx:03d}.ply') # save in meters for visualization
 
     return depth_zivid_projected_mm
 
 
-
-# project from zivid depth patrix to point cloud and back to depth matrix with rs intrinsics and distortion to get "zivid GT as seen by RealSense" for pixel-level comparison
-def project_depth_zivid_to_rs(depth_zivid_mm: np.ndarray, depth_rs_mm: np.ndarray, finx = 0) -> np.ndarray:
-    # create 3D point cloud from zivid depth
-    XYZ = project_camera_to_3d(depth_zivid_mm, CAMERA_MATRIX_ZIVID, DIST_COEFFS_ZIVID)  # (N, 3) array of 3D points in Zivid camera space
-    # save to ply point cloud for visualization
-    save_to_ply(XYZ/1000, f'zivid_original_points_{finx:03d}.ply') # save in meters for visualization
-
-    # project back on imaage RS
-    depth_zivid_projected_mm = project_3d_to_camera(XYZ, CAMERA_MATRIX_RS, DIST_COEFFS_RS, frame_size = depth_rs_mm.shape)  # (H, W) depth map of Zivid points projected into RealSense pixel space
-
-    XYZ_RS = project_camera_to_3d(depth_zivid_projected_mm, CAMERA_MATRIX_RS, DIST_COEFFS_RS)
-        # save to ply point cloud for visualization
-    save_to_ply(XYZ_RS/1000, f'zivid_projected_points_{finx:03d}.ply') # save in meters for visualization
-
-    return depth_zivid_projected_mm
 # ── depth-vs-distance analysis ────────────────────────────────────────────────
 
 class DepthBinAccumulator:
@@ -711,7 +695,7 @@ def main_inbolt_graphs_with_projection():
         rs_mm = data['depth_rs'].astype(np.float32)   # RealSense depth in mm
 
         # project zivid on rs
-        zv_prj_mm = project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
+        zv_prj_mm           = project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
 
 
         rs_valid           = (10 < rs_mm) 
