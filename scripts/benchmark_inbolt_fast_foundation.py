@@ -46,8 +46,8 @@ from report import ReportGenerator
 
 
 # ── constants ────────────────────────────────────────────────────────────────
-#DATA_DIR         = r'C:\Work\Data\Depth\Data Collection'  # local path to the dataset
-DATA_DIR         = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection'  # local path to the dataset
+DATA_DIR         = r'C:\Work\Data\Depth\Data Collection'  # local path to the dataset
+#DATA_DIR         = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection'  # local path to the dataset
 MODEL_PATH      = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
 FINETUNED_PATH  = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
 DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark'
@@ -361,6 +361,57 @@ def fit_depth_scale_regression(
         "residuals_mm": residuals,
         "rmse_mm": rmse,
         "fit_intercept": fit_intercept,
+    }
+
+def fit_plane_and_compute_error(depth_diff_mm: np.ndarray, valid_mask: np.ndarray) -> dict:
+    """Fit a plane z = a*x + b*y + c on valid pixels and compute residual errors.
+
+    Parameters
+    ----------
+    depth_diff_mm : np.ndarray
+        2D depth-difference image in millimetres.
+    valid_mask : np.ndarray
+        2D boolean mask of valid pixels used for fitting/evaluation.
+
+    Returns
+    -------
+    dict
+        Plane coefficients, residual statistics, and counts.
+    """
+    if depth_diff_mm.ndim != 2:
+        raise ValueError("depth_diff_mm must be a 2D array")
+    if valid_mask.shape != depth_diff_mm.shape:
+        raise ValueError("valid_mask must have the same shape as depth_diff_mm")
+
+    valid = valid_mask.astype(bool) & np.isfinite(depth_diff_mm)
+    n_valid = int(np.count_nonzero(valid))
+    if n_valid < 3:
+        return {
+            "coeffs": np.array([np.nan, np.nan, np.nan], dtype=np.float64),
+            "rmse_mm": np.nan,
+            "mae_mm": np.nan,
+            "residuals_mm": np.array([], dtype=np.float64),
+            "n_valid": n_valid,
+        }
+
+    ys, xs = np.nonzero(valid)
+    z = depth_diff_mm[valid].astype(np.float64)
+
+    # Solve least-squares for z = a*x + b*y + c
+    A = np.stack([xs.astype(np.float64), ys.astype(np.float64), np.ones_like(z)], axis=1)
+    coeffs, _, _, _ = np.linalg.lstsq(A, z, rcond=None)
+
+    fitted = A @ coeffs
+    residuals = z - fitted
+    rmse = float(np.sqrt(np.mean(residuals ** 2)))
+    mae = float(np.mean(np.abs(residuals)))
+
+    return {
+        "coeffs": coeffs,
+        "rmse_mm": rmse,
+        "mae_mm": mae,
+        "residuals_mm": residuals,
+        "n_valid": n_valid,
     }
 
 def build_example_depth_scale_regression_series(
@@ -684,34 +735,64 @@ def main_inbolt_graphs_with_projection():
     rs_depth_diff = np.arange(n)*0 # mm
     zv_depth_diff = np.arange(n)*0 # zivid mm
     rs_depth_rsme = np.arange(n)*0 # mm
-    zv_depth_rsme = np.arange(n)*0 # zivid mm    
+    zv_depth_rsme = np.arange(n)*0 # zivid mm
     rs_ref = None
     zv_ref = None
     for idx in range(n):
-        data  = source.get_item(idx)
-        left  = data['left']
-        right = data['right']
-        zv_mm = data['depth_zivid'].astype(np.float32)   # Zivid GT in mm
-        rs_mm = data['depth_rs'].astype(np.float32)   # RealSense depth in mm
+        data                = source.get_item(idx)
+        left                = data['left']
+        right               = data['right']
+        zv_mm               = data['depth_zivid'].astype(np.float32)   # Zivid GT in mm
+        rs_mm               = data['depth_rs'].astype(np.float32)   # RealSense depth in mm
 
         # project zivid on rs
         zv_prj_mm           = project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
 
-
         rs_valid           = (10 < rs_mm) 
-        rs_valid           = rs_valid & (rs_mm < rs_mm[rs_valid].min()*1.2) 
+        rs_valid           = rs_valid & (rs_mm < rs_mm[rs_valid].min()*1.1) 
         zv_valid           = (10 < zv_prj_mm) 
-        zv_valid           = zv_valid & (zv_prj_mm < zv_prj_mm[zv_valid].min()*1.2) & rs_valid
+        zv_valid           = zv_valid & (zv_prj_mm < zv_prj_mm[zv_valid].min()*1.05) & rs_valid
         if idx == 0:
             rs_ref = rs_mm
             zv_ref = zv_prj_mm
         else:
-            rs_diff = rs_mm[zv_valid]       - rs_ref[zv_valid]
-            zv_diff = zv_prj_mm[zv_valid]   - zv_ref[zv_valid]
-            rs_depth_diff[idx] = np.mean(rs_diff)
-            zv_depth_diff[idx] = np.mean(zv_diff)
-            rs_depth_rsme[idx] = np.sqrt(np.mean((rs_diff - rs_depth_diff[idx])**2))
-            zv_depth_rsme[idx] = np.sqrt(np.mean((zv_diff - zv_depth_diff[idx])**2))
+
+            rs_diff_map = rs_mm     - rs_ref
+            zv_diff_map = zv_prj_mm - zv_ref
+
+            # debug visualization of difference maps and valid masks
+            # plt.figure(figsize=(12, 4))
+            # plt.subplot(1, 3, 1),plt.imshow(rs_diff_map, vmin=-10, vmax=1000),plt.title(f"RealSense Depth Diff (mm)"),plt.colorbar()
+            # plt.subplot(1, 3, 2),plt.imshow(zv_diff_map, vmin=-10, vmax=1000),plt.title(f"Zivid Projected Depth Diff (mm)"),plt.colorbar()
+            # plt.subplot(1, 3, 3),plt.imshow(zv_valid, cmap='gray'),plt.title(f"Valid Mask (Zivid Projection)"),plt.colorbar()
+            # plt.suptitle(f"Sample {idx:03d} Depth Difference Maps and Valid Mask", fontsize=16)
+            # plt.tight_layout()
+            # plt.show()
+
+            fig, axes = plt.subplots(1, 3, sharey=True, sharex=True, figsize=(8,4))
+            axes[0].imshow(rs_diff_map, vmin=-10, vmax=1000),axes[0].set_title(f"RealSense Depth Diff (mm)"),
+            axes[1].imshow(zv_diff_map, vmin=-10, vmax=1000),axes[1].set_title(f"Zivid Projected Depth Diff (mm)"),
+            axes[2].imshow(zv_valid, cmap='gray'),axes[2].set_title(f"Valid Mask (Zivid Projection)"),
+            plt.suptitle(f"Sample {idx:03d} Depth Difference Maps and Valid Mask", fontsize=16)
+            plt.tight_layout()
+            plt.show()
+
+
+
+            # Mean depth deltas over the common valid support.
+            rs_diff_valid = rs_diff_map[zv_valid]
+            zv_diff_valid = zv_diff_map[zv_valid]
+            rs_depth_diff[idx] = float(np.mean(rs_diff_valid))
+            zv_depth_diff[idx] = float(np.mean(zv_diff_valid))
+
+            # Fit a plane to each difference map and use fit residual RMSE as error.
+            rs_plane_fit = fit_plane_and_compute_error(rs_diff_map, zv_valid)
+            zv_plane_fit = fit_plane_and_compute_error(zv_diff_map, zv_valid)
+            rs_depth_rsme[idx] = rs_plane_fit["rmse_mm"]
+            zv_depth_rsme[idx] = zv_plane_fit["rmse_mm"]
+            # old code
+            #rs_depth_rsme[idx] = np.sqrt(np.mean((rs_diff - rs_depth_diff[idx])**2))
+            #zv_depth_rsme[idx] = np.sqrt(np.mean((zv_diff - zv_depth_diff[idx])**2))            
 
     sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, zv_depth_diff, rs_rsme_mm=rs_depth_rsme, zv_rsme_mm=zv_depth_rsme)
     plot_depth_scale_regression(sm, out_path=Path(DEFAULT_OUT) / "depth_scale_comparison.png", title="Depth Scale Comparison")
