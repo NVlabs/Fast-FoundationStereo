@@ -37,6 +37,7 @@ import os
 import glob
 import unittest
 import logging as log
+import yaml
 
 
 # --------------------------------
@@ -92,12 +93,17 @@ class DataSource:
                 if not os.path.isfile(depth_rs_path) or not os.path.isfile(depth_zivid_path):
                     continue  # skip incomplete samples
 
+                rs_metadata_path = os.path.join(rs_root, idx, 'metadata.yaml')
+                zv_metadata_path = os.path.join(zivid_root, idx, 'metadata.yaml')
+
                 self.imgs.append({
                     'left':  left_path,
                     'right': right_path,
                     'depth_rs': depth_rs_path,
                     'depth_zivid': depth_zivid_path,
                     'rgb':   rgb_path if os.path.isfile(rgb_path) else None,
+                    'metadata_rs': rs_metadata_path if os.path.isfile(rs_metadata_path) else None,
+                    'metadata_zv': zv_metadata_path if os.path.isfile(zv_metadata_path) else None,
                 })
 
         if sub_indexes is not None:
@@ -108,7 +114,7 @@ class DataSource:
 
     def get_item(self, index: int, debug: bool = False):
         """Return one sample as a dict with left, right, depth_faro, depth_rs, rgb."""
-        output_str = {"left": [], "right": [], "depth_zivid": [], "depth_rs": [], "rgb": []}
+        output_str = {"left": [], "right": [], "depth_zivid": [], "depth_rs": [], "rgb": [], "metadata_rs": None, "metadata_zv": None}
 
         entry = self.imgs[index]
 
@@ -132,11 +138,23 @@ class DataSource:
         depth_rs = depth_rs_img.astype(np.float32)
         depth_zivid = depth_zivid_img.astype(np.float32)   # uint16 mm → float32 mm
 
-        output_str["left"]       = left_img
-        output_str["right"]      = right_img
+        metadata_rs = None
+        if entry.get('metadata_rs') is not None:
+            with open(entry['metadata_rs'], 'r') as f:
+                metadata_rs = yaml.safe_load(f)
+
+        metadata_zv = None
+        if entry.get('metadata_zv') is not None:
+            with open(entry['metadata_zv'], 'r') as f:
+                metadata_zv = yaml.safe_load(f)
+
+        output_str["left"]        = left_img
+        output_str["right"]       = right_img
         output_str["depth_zivid"] = depth_zivid   # Zivid GT
-        output_str["depth_rs"]   = depth_rs
-        output_str["rgb"]        = rgb_img
+        output_str["depth_rs"]    = depth_rs
+        output_str["rgb"]         = rgb_img
+        output_str["metadata_rs"] = metadata_rs
+        output_str["metadata_zv"] = metadata_zv
 
         if debug:
             img_list = [left_img, right_img, depth_rs, depth_zivid]
