@@ -345,6 +345,8 @@ def build_example_depth_scale_regression_series(
     zv_delta_mm,
     fs_delta_mm=None,
     ftn_delta_mm=None,
+    rs_rsme_mm=None,
+    zv_rsme_mm=None
 ) -> dict:
     """Return example depth-delta series that reproduces the attached figure.
 
@@ -361,6 +363,7 @@ def build_example_depth_scale_regression_series(
         "realsense": {
             "gt_delta_mm": gt_delta_mm,
             "measured_delta_mm": rs_delta_mm,
+            "rmse_mm": rs_rsme_mm,
             "color": "#e74c3c",
             "marker": "s",
             "label": "realsense",
@@ -368,6 +371,7 @@ def build_example_depth_scale_regression_series(
         "zivid": {
             "gt_delta_mm": gt_delta_mm,
             "measured_delta_mm": zv_delta_mm,
+            "rmse_mm": zv_rsme_mm,
             "color": "#2980b9",
             "marker": "o",
             "label": "zivid",
@@ -436,6 +440,7 @@ def plot_depth_scale_regression(
         result["label"] = cfg.get("label", default_name)
         result["color"] = cfg.get("color", None)
         result["marker"] = cfg.get("marker", "o")
+        result["rmse_mm"] = result["rmse_mm"] if "rmse_mm" not in cfg else cfg["rmse_mm"]
         fit_results.append(result)
         max_x = max(max_x, float(np.max(result["gt_delta_mm"])))
         max_y = max(max_y, float(np.max(result["measured_delta_mm"])))
@@ -452,6 +457,7 @@ def plot_depth_scale_regression(
         slope = result["slope"]
         intercept = result["intercept"]
         rmse = result["rmse_mm"]
+        print(rmse)
 
         axes[0].scatter(x, y, color=color, marker=marker, s=70, label=f"{label} (raw)", zorder=3)
         axes[0].plot(
@@ -460,21 +466,22 @@ def plot_depth_scale_regression(
             color=color,
             linewidth=2.0,
             label=(
-                f"{label} fit: slope={slope:.3f}, intercept={intercept:.1f}mm, RMSE={rmse:.1f}mm"
+                f"{label} fit: slope={slope:.3f}, intercept={intercept:.1f}mm"
                 if fit_intercept else
-                f"{label} fit: slope={slope:.3f}, RMSE={rmse:.1f}mm"
+                f"{label} fit: slope={slope:.3f}"
             ),
         )
 
         axes[1].scatter(
             x,
-            result["residuals_mm"],
+            rmse, #result["residuals_mm"],
             color=color,
             marker=marker,
             s=70,
-            label=f"{label} (RMSE={rmse:.1f}mm)",
+            label=f"{label} RMSE mm",
             zorder=3,
         )
+    
 
     axes[0].plot(
         fit_x,
@@ -502,6 +509,7 @@ def plot_depth_scale_regression(
 
     residual_values = np.concatenate([r["residuals_mm"] for r in fit_results])
     residual_abs_max = max(1.0, float(np.max(np.abs(residual_values))))
+    residual_abs_max = 50
     axes[1].set_ylim(-residual_abs_max * 1.15, residual_abs_max * 1.15)
 
     fig.suptitle(title, fontsize=18, fontweight="bold")
@@ -651,6 +659,8 @@ def main_inbolt_graphs_with_projection():
     gt_depth_diff = np.arange(n)*100 # mm
     rs_depth_diff = np.arange(n)*0 # mm
     zv_depth_diff = np.arange(n)*0 # zivid mm
+    rs_depth_rsme = np.arange(n)*0 # mm
+    zv_depth_rsme = np.arange(n)*0 # zivid mm    
     rs_ref = None
     zv_ref = None
     for idx in range(n):
@@ -661,19 +671,25 @@ def main_inbolt_graphs_with_projection():
         rs_mm = data['depth_rs'].astype(np.float32)   # RealSense depth in mm
 
         # project zivid on rs
-        zv_mm = project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
+        zv_prj_mm = project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
 
-        #rs_valid           = (rs_mm > rs_mm.max()*0.8) 
-        zv_valid           = (zv_mm > zv_mm.max()*0.1) 
+
+        rs_valid           = (10 < rs_mm) 
+        rs_valid           = rs_valid & (rs_mm < rs_mm[rs_valid].min()*1.2) 
+        zv_valid           = (10 < zv_prj_mm) 
+        zv_valid           = zv_valid & (zv_prj_mm < zv_prj_mm[zv_valid].min()*1.2) & rs_valid
         if idx == 0:
             rs_ref = rs_mm
-            zv_ref = zv_mm
+            zv_ref = zv_prj_mm
         else:
-            rs_depth_diff[idx] = np.nanmean(rs_mm[zv_valid] - rs_ref[zv_valid])
-            zv_depth_diff[idx] = np.nanmean(zv_mm[zv_valid] - zv_ref[zv_valid])
+            rs_diff = rs_mm[zv_valid] - rs_ref[zv_valid]
+            zv_diff = zv_prj_mm[zv_valid] - zv_ref[zv_valid]
+            rs_depth_diff[idx] = np.mean(rs_diff)
+            zv_depth_diff[idx] = np.mean(zv_diff)
+            rs_depth_rsme[idx] = np.sqrt(np.mean((rs_diff - rs_depth_diff[idx])**2))
+            zv_depth_rsme[idx] = np.sqrt(np.mean((zv_diff - zv_depth_diff[idx])**2))
 
-
-    sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, zv_depth_diff)
+    sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, zv_depth_diff, rs_rsme_mm=rs_depth_rsme, zv_rsme_mm=zv_depth_rsme)
     plot_depth_scale_regression(sm, out_path=Path(DEFAULT_OUT) / "depth_scale_comparison.png", title="Depth Scale Comparison")
 
     logging.info(f"All outputs written to {out_dir}")
