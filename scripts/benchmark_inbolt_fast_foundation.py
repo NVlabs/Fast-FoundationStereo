@@ -25,8 +25,8 @@ sys.path.append(code_dir)
 
 import numpy as np
 import torch
-#import matplotlib
-#matplotlib.use('Agg')
+# import matplotlib
+# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from core.utils.utils import InputPadder
@@ -57,7 +57,7 @@ DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark'
 # DEFAULT_OUT    = f'{code_dir}/../reports/faro_benchmark'
 
 BF              = 49470.45   # focal_px * baseline_mm  (calibrated from camera)
-BF_RS           = 49.8624*385.73  # D435 - focal_px * baseline_mm (calibrated from camera)
+BF_RS           = 49.8624*385.73 #- true # D435 - focal_px * baseline_mm (calibrated from camera)
 ITERS           = 8          # GRU iterations
 N_VIZ           = 5         # number of frames saved for visual comparison in report
 
@@ -797,7 +797,7 @@ def main_inbolt_graphs_with_projection():
             #zv_depth_rsme[idx] = np.sqrt(np.mean((zv_diff - zv_depth_diff[idx])**2))            
 
     sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, zv_depth_diff, rs_rsme_mm=rs_depth_rsme, zv_rsme_mm=zv_depth_rsme)
-    plot_depth_scale_regression(sm, out_path=Path(DEFAULT_OUT) / "depth_scale_comparison.png", title="Depth Scale Comparison")
+    plot_depth_scale_regression(sm, out_path=Path(DEFAULT_OUT) / "depth_scale_comparison_inbolt.png", title="Depth Scale Comparison")
 
     logging.info(f"All outputs written to {out_dir}")
 
@@ -844,10 +844,7 @@ def main_inbolt_ffs_graphs_with_projection():
     zv_depth_rsme = np.arange(n)*0 # zivid mm
     ffs_depth_rsme = np.arange(n)*0 # mm
     ftn_depth_rsme = np.arange(n)*0 # zivid mm        
-    rs_ref = None
-    zv_ref = None
-    ffs_ref = None
-    ftn_ref = None
+
     for idx in range(n):
         data            = source.get_item_projected(idx)
         left            = data['left']
@@ -858,36 +855,23 @@ def main_inbolt_ffs_graphs_with_projection():
         ftn_mm          = infer_depth_rs_mm(models["finetuned"], left, right)
    
         # project zivid on rs
-        zv_prj_mm           = project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
+        zv_prj_mm       = zv_mm #project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
 
-        rs_valid           = (10 < rs_mm) 
-        zv_valid           = (10 < zv_prj_mm) 
-        ffs_valid          = (10 < ffs_mm)  
-        ftn_valid          = (10 < ftn_mm)  
+        rs_valid        = (10 < rs_mm) 
+        zv_valid        = (10 < zv_prj_mm) 
+        ffs_valid       = (10 < ffs_mm)  
+        ftn_valid       = (10 < ftn_mm)  
 
-        zv_zv_error = source.compute_depth_error(zv_prj_mm, zv_prj_mm, depth_mask=zv_valid & rs_valid)
-        rs_zv_error = source.compute_depth_error(rs_mm, zv_prj_mm, depth_mask=zv_valid & rs_valid)
-        ffs_zv_error = source.compute_depth_error(ffs_mm, zv_prj_mm, depth_mask=zv_valid & ffs_valid)
-        ftn_zv_error = source.compute_depth_error(ftn_mm, zv_prj_mm, depth_mask=zv_valid & ftn_valid)
+        zv_zv_error     = source.compute_depth_error(zv_prj_mm, zv_prj_mm, depth_mask=zv_valid & rs_valid)
+        rs_zv_error     = source.compute_depth_error(rs_mm,     zv_prj_mm, depth_mask=zv_valid & rs_valid)
+        ffs_zv_error    = source.compute_depth_error(ffs_mm,    zv_prj_mm, depth_mask=zv_valid & ffs_valid)
+        ftn_zv_error    = source.compute_depth_error(ftn_mm,    zv_prj_mm, depth_mask=zv_valid & ftn_valid)
 
+        # # debug
+        # img_list = [left, right, rs_mm, zv_prj_mm, ffs_mm, ftn_mm]
+        # ttl_list = ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth Zivid (mm)', 'depth FFS (mm)', 'depth FTN (mm)']
+        # source.show_subset(img_list, ttl_list, save_path=DEFAULT_OUT , fig_name = f"sample_{idx:03d}_inputs.png")
 
-
-        # debug visualization of difference maps and valid masks
-        # plt.figure(figsize=(12, 4))
-        # plt.subplot(1, 3, 1),plt.imshow(rs_diff_map, vmin=-10, vmax=1000),plt.title(f"RealSense Depth Diff (mm)"),plt.colorbar()
-        # plt.subplot(1, 3, 2),plt.imshow(zv_diff_map, vmin=-10, vmax=1000),plt.title(f"Zivid Projected Depth Diff (mm)"),plt.colorbar()
-        # plt.subplot(1, 3, 3),plt.imshow(zv_valid, cmap='gray'),plt.title(f"Valid Mask (Zivid Projection)"),plt.colorbar()
-        # plt.suptitle(f"Sample {idx:03d} Depth Difference Maps and Valid Mask", fontsize=16)
-        # plt.tight_layout()
-        # plt.show()
-
-        # fig, axes = plt.subplots(1, 3, sharey=True, sharex=True, figsize=(8,4))
-        # axes[0].imshow(rs_diff_map, vmin=-10, vmax=1000),axes[0].set_title(f"RealSense Depth Diff (mm)"),
-        # axes[1].imshow(zv_diff_map, vmin=-10, vmax=1000),axes[1].set_title(f"Zivid Projected Depth Diff (mm)"),
-        # axes[2].imshow(zv_valid, cmap='gray'),axes[2].set_title(f"Valid Mask (Zivid Projection)"),
-        # plt.suptitle(f"Sample {idx:03d} Depth Difference Maps and Valid Mask", fontsize=16)
-        # plt.tight_layout()
-        # plt.show()
 
         zv_depth_diff[idx] = np.mean(zv_zv_error) 
         rs_depth_diff[idx] = np.mean(rs_zv_error)
