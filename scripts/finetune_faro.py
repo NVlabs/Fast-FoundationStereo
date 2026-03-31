@@ -166,7 +166,7 @@ def main():
 
         if avg < best_loss:
             best_loss = avg
-            torch.save(model.module, OUT_PATH.replace('.pth', f'_{epoch}.pth'))
+            torch.save(model.module, OUT_PATH.replace('.pth', f'_epoch_{epoch+1:03d}.pth'))
             logging.info(f"  → saved best model (loss={best_loss:.4f})")
 
     logging.info(f"Training complete. Best loss: {best_loss:.4f}")
