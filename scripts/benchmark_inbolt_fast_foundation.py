@@ -46,8 +46,8 @@ from report import ReportGenerator
 
 
 # ── constants ────────────────────────────────────────────────────────────────
-DATA_DIR         = r'C:\Work\Data\Depth\Data Collection'  # local path to the dataset
-#DATA_DIR         = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection'  # local path to the dataset
+#DATA_DIR         = r'C:\Work\Data\Depth\Data Collection'  # local path to the dataset
+DATA_DIR        = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection'  # local path to the dataset
 MODEL_PATH      = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
 FINETUNED_PATH  = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
 DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark'
@@ -417,9 +417,11 @@ def build_example_depth_scale_regression_series(
     rs_delta_mm,
     zv_delta_mm,
     fs_delta_mm=None,
-    ftn_delta_mm=None,
+    ft_delta_mm=None,
     rs_rsme_mm=None,
-    zv_rsme_mm=None
+    zv_rsme_mm=None,
+    fs_rsme_mm=None,
+    ft_rsme_mm=None
 ) -> dict:
     """Return example depth-delta series that reproduces the attached figure.
 
@@ -454,14 +456,16 @@ def build_example_depth_scale_regression_series(
         series_map["ffs"] = {
             "gt_delta_mm": gt_delta_mm,
             "measured_delta_mm": fs_delta_mm,
+            "rmse_mm": fs_rsme_mm,
             "color": "#27ae60",
             "marker": "d",
             "label": "ffs",
         }
-    if ftn_delta_mm is not None:
+    if ft_delta_mm is not None:
         series_map["ftn"] = {
             "gt_delta_mm": gt_delta_mm,
-            "measured_delta_mm": ftn_delta_mm,
+            "measured_delta_mm": ft_delta_mm,
+            "rmse_mm": ft_rsme_mm,
             "color": "#f39c12",
             "marker": "^",
             "label": "ftn",
@@ -799,7 +803,7 @@ def main_inbolt_graphs_with_projection():
 
 # ── inbolt and FFS graphs ─────────────────────────────────────────────────────────────────────
 
-def main_inbolt_ffs_graphs():
+def main_inbolt_ffs_graphs_with_projection():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out_dir', default=DEFAULT_OUT, help='Output directory for the report')
     parser.add_argument('--data_dir', default=DATA_DIR, help='Path to dataset root')
@@ -836,72 +840,61 @@ def main_inbolt_ffs_graphs():
     zv_depth_diff = np.arange(n)*0 # zivid mm
     ffs_depth_diff = np.arange(n)*0 # ffs mm
     ftn_depth_diff = np.arange(n)*0 # ftn mm
+    rs_depth_rsme = np.arange(n)*0 # mm
+    zv_depth_rsme = np.arange(n)*0 # zivid mm
+    ffs_depth_rsme = np.arange(n)*0 # mm
+    ftn_depth_rsme = np.arange(n)*0 # zivid mm        
     rs_ref = None
     zv_ref = None
     ffs_ref = None
     ftn_ref = None
     for idx in range(n):
-        data  = source.get_item(idx)
-        left  = data['left']
-        right = data['right']
-        zv_mm = data['depth_zivid'].astype(np.float32)   # Zivid GT in mm
-        rs_mm = data['depth_rs'].astype(np.float32)   # RealSense depth in mm
-        ffs_mm = infer_depth_rs_mm(models["original"], left, right)
-        ftn_mm = infer_depth_rs_mm(models["finetuned"], left, right)
+        data            = source.get_item_projected(idx)
+        left            = data['left']
+        right           = data['right']
+        zv_mm           = data['depth_zivid'].astype(np.float32)   # Zivid GT in mm
+        rs_mm           = data['depth_rs'].astype(np.float32)   # RealSense depth in mm
+        ffs_mm          = infer_depth_rs_mm(models["original"], left, right)
+        ftn_mm          = infer_depth_rs_mm(models["finetuned"], left, right)
    
-
         # project zivid on rs
         zv_prj_mm           = project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
 
         rs_valid           = (10 < rs_mm) 
-        rs_valid           = rs_valid & (rs_mm < rs_mm[rs_valid].min()*1.1) 
         zv_valid           = (10 < zv_prj_mm) 
-        zv_valid           = zv_valid & (zv_prj_mm < zv_prj_mm[zv_valid].min()*1.05) & rs_valid
-        if idx == 0:
-            rs_ref = rs_mm
-            zv_ref = zv_prj_mm
-        else:
+        ffs_valid          = (10 < ffs_mm)  
+        ftn_valid          = (10 < ftn_mm)  
 
-            rs_diff_map = rs_mm     - rs_ref
-            zv_diff_map = zv_prj_mm - zv_ref
-
-            # debug visualization of difference maps and valid masks
-            # plt.figure(figsize=(12, 4))
-            # plt.subplot(1, 3, 1),plt.imshow(rs_diff_map, vmin=-10, vmax=1000),plt.title(f"RealSense Depth Diff (mm)"),plt.colorbar()
-            # plt.subplot(1, 3, 2),plt.imshow(zv_diff_map, vmin=-10, vmax=1000),plt.title(f"Zivid Projected Depth Diff (mm)"),plt.colorbar()
-            # plt.subplot(1, 3, 3),plt.imshow(zv_valid, cmap='gray'),plt.title(f"Valid Mask (Zivid Projection)"),plt.colorbar()
-            # plt.suptitle(f"Sample {idx:03d} Depth Difference Maps and Valid Mask", fontsize=16)
-            # plt.tight_layout()
-            # plt.show()
-
-            # fig, axes = plt.subplots(1, 3, sharey=True, sharex=True, figsize=(8,4))
-            # axes[0].imshow(rs_diff_map, vmin=-10, vmax=1000),axes[0].set_title(f"RealSense Depth Diff (mm)"),
-            # axes[1].imshow(zv_diff_map, vmin=-10, vmax=1000),axes[1].set_title(f"Zivid Projected Depth Diff (mm)"),
-            # axes[2].imshow(zv_valid, cmap='gray'),axes[2].set_title(f"Valid Mask (Zivid Projection)"),
-            # plt.suptitle(f"Sample {idx:03d} Depth Difference Maps and Valid Mask", fontsize=16)
-            # plt.tight_layout()
-            # plt.show()
+        zv_zv_error = source.compute_depth_error(zv_prj_mm, zv_prj_mm, depth_mask=zv_valid & rs_valid)
+        rs_zv_error = source.compute_depth_error(rs_mm, zv_prj_mm, depth_mask=zv_valid & rs_valid)
+        ffs_zv_error = source.compute_depth_error(ffs_mm, zv_prj_mm, depth_mask=zv_valid & ffs_valid)
+        ftn_zv_error = source.compute_depth_error(ftn_mm, zv_prj_mm, depth_mask=zv_valid & ftn_valid)
 
 
 
-            # Mean depth deltas over the common valid support.
-            rs_diff_valid = rs_diff_map[zv_valid]
-            zv_diff_valid = zv_diff_map[zv_valid]
-            rs_depth_diff[idx] = float(np.mean(rs_diff_valid))
-            zv_depth_diff[idx] = float(np.mean(zv_diff_valid))
+        # debug visualization of difference maps and valid masks
+        # plt.figure(figsize=(12, 4))
+        # plt.subplot(1, 3, 1),plt.imshow(rs_diff_map, vmin=-10, vmax=1000),plt.title(f"RealSense Depth Diff (mm)"),plt.colorbar()
+        # plt.subplot(1, 3, 2),plt.imshow(zv_diff_map, vmin=-10, vmax=1000),plt.title(f"Zivid Projected Depth Diff (mm)"),plt.colorbar()
+        # plt.subplot(1, 3, 3),plt.imshow(zv_valid, cmap='gray'),plt.title(f"Valid Mask (Zivid Projection)"),plt.colorbar()
+        # plt.suptitle(f"Sample {idx:03d} Depth Difference Maps and Valid Mask", fontsize=16)
+        # plt.tight_layout()
+        # plt.show()
 
-            # Fit a plane to each difference map and use fit residual RMSE as error.
-            rs_plane_fit = fit_plane_and_compute_error(rs_diff_map, zv_valid)
-            zv_plane_fit = fit_plane_and_compute_error(zv_diff_map, zv_valid)
-            rs_depth_rsme[idx] = rs_plane_fit["rmse_mm"]
-            zv_depth_rsme[idx] = zv_plane_fit["rmse_mm"]
-            # old code
-            #rs_depth_rsme[idx] = np.sqrt(np.mean((rs_diff - rs_depth_diff[idx])**2))
-            #zv_depth_rsme[idx] = np.sqrt(np.mean((zv_diff - zv_depth_diff[idx])**2))            
+        # fig, axes = plt.subplots(1, 3, sharey=True, sharex=True, figsize=(8,4))
+        # axes[0].imshow(rs_diff_map, vmin=-10, vmax=1000),axes[0].set_title(f"RealSense Depth Diff (mm)"),
+        # axes[1].imshow(zv_diff_map, vmin=-10, vmax=1000),axes[1].set_title(f"Zivid Projected Depth Diff (mm)"),
+        # axes[2].imshow(zv_valid, cmap='gray'),axes[2].set_title(f"Valid Mask (Zivid Projection)"),
+        # plt.suptitle(f"Sample {idx:03d} Depth Difference Maps and Valid Mask", fontsize=16)
+        # plt.tight_layout()
+        # plt.show()
 
-    sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, zv_depth_diff, rs_rsme_mm=rs_depth_rsme, zv_rsme_mm=zv_depth_rsme)
-
-    sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, zv_depth_diff, ffs_depth_diff, ftn_depth_diff)
+        zv_depth_rsme[idx] = np.sqrt(np.mean(zv_zv_error**2)) 
+        rs_depth_rsme[idx] = np.sqrt(np.mean(rs_zv_error**2))
+        ffs_depth_rsme[idx] = np.sqrt(np.mean(ffs_zv_error**2))
+        ftn_depth_rsme[idx] = np.sqrt(np.mean(ftn_zv_error**2))
+           
+    sm = build_example_depth_scale_regression_series(zv_zv_error, rs_zv_error, zv_zv_error, ffs_zv_error, ftn_zv_error, rs_rsme_mm=rs_depth_rsme, zv_rsme_mm=zv_depth_rsme, fs_rsme_mm=ffs_depth_rsme, ft_rsme_mm=ftn_depth_rsme)
     plot_depth_scale_regression(sm, out_path=Path(DEFAULT_OUT) / "depth_scale_comparison.png", title="Depth Scale Comparison")
 
     logging.info(f"All outputs written to {out_dir}")
@@ -1090,7 +1083,7 @@ if __name__ == '__main__':
     #main()
 
     # 4. inbolt with ffs
-    main_inbolt_ffs_graphs()
+    main_inbolt_ffs_graphs_with_projection()
 
     # 5. inbolt with zivid projection
-    main_inbolt_graphs_with_projection()
+    #main_inbolt_graphs_with_projection()
