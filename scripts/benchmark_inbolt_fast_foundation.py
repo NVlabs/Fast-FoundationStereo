@@ -797,7 +797,6 @@ def main_inbolt_graphs_with_projection():
 
     logging.info(f"All outputs written to {out_dir}")
 
-
 # ── inbolt and FFS graphs ─────────────────────────────────────────────────────────────────────
 
 def main_inbolt_ffs_graphs():
@@ -851,25 +850,56 @@ def main_inbolt_ffs_graphs():
         ftn_mm = infer_depth_rs_mm(models["finetuned"], left, right)
    
 
-        # # Resize Zivid depth to match RealSense IR image resolution for pixel-level comparison
-        # rs_h, rs_w = left.shape[:2]
-        # if gt_mm.shape != (rs_h, rs_w):
-        #     #gt_mm = _cv2.resize(gt_mm, (rs_w, rs_h), interpolation=_cv2.INTER_NEAREST)
-        #     print(f"Shape mismatch: gt_mm {gt_mm.shape} vs rs {rs_h, rs_w}")
-        rs_valid           = (rs_mm > rs_mm.max()*0.8) 
-        zv_valid           = (zv_mm > zv_mm.max()*0.8) 
-        ffs_valid          = (ffs_mm > ffs_mm.max()*0.8)
-        ftn_valid          = (ftn_mm > ftn_mm.max()*0.8)
+        # project zivid on rs
+        zv_prj_mm           = project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
+
+        rs_valid           = (10 < rs_mm) 
+        rs_valid           = rs_valid & (rs_mm < rs_mm[rs_valid].min()*1.1) 
+        zv_valid           = (10 < zv_prj_mm) 
+        zv_valid           = zv_valid & (zv_prj_mm < zv_prj_mm[zv_valid].min()*1.05) & rs_valid
         if idx == 0:
-            rs_ref = np.nanmean(rs_mm[rs_valid])
-            zv_ref = np.nanmean(zv_mm[zv_valid])
-            ffs_ref = np.nanmean(ffs_mm[ffs_valid])
-            ftn_ref = np.nanmean(ftn_mm[ftn_valid])                        
+            rs_ref = rs_mm
+            zv_ref = zv_prj_mm
         else:
-            rs_depth_diff[idx] = np.nanmean(rs_mm[rs_valid]) - rs_ref
-            zv_depth_diff[idx] = np.nanmean(zv_mm[zv_valid]) - zv_ref
-            ffs_depth_diff[idx] = np.nanmean(ffs_mm[ffs_valid]) - ffs_ref
-            ftn_depth_diff[idx] = np.nanmean(ftn_mm[ftn_valid]) - ftn_ref
+
+            rs_diff_map = rs_mm     - rs_ref
+            zv_diff_map = zv_prj_mm - zv_ref
+
+            # debug visualization of difference maps and valid masks
+            # plt.figure(figsize=(12, 4))
+            # plt.subplot(1, 3, 1),plt.imshow(rs_diff_map, vmin=-10, vmax=1000),plt.title(f"RealSense Depth Diff (mm)"),plt.colorbar()
+            # plt.subplot(1, 3, 2),plt.imshow(zv_diff_map, vmin=-10, vmax=1000),plt.title(f"Zivid Projected Depth Diff (mm)"),plt.colorbar()
+            # plt.subplot(1, 3, 3),plt.imshow(zv_valid, cmap='gray'),plt.title(f"Valid Mask (Zivid Projection)"),plt.colorbar()
+            # plt.suptitle(f"Sample {idx:03d} Depth Difference Maps and Valid Mask", fontsize=16)
+            # plt.tight_layout()
+            # plt.show()
+
+            # fig, axes = plt.subplots(1, 3, sharey=True, sharex=True, figsize=(8,4))
+            # axes[0].imshow(rs_diff_map, vmin=-10, vmax=1000),axes[0].set_title(f"RealSense Depth Diff (mm)"),
+            # axes[1].imshow(zv_diff_map, vmin=-10, vmax=1000),axes[1].set_title(f"Zivid Projected Depth Diff (mm)"),
+            # axes[2].imshow(zv_valid, cmap='gray'),axes[2].set_title(f"Valid Mask (Zivid Projection)"),
+            # plt.suptitle(f"Sample {idx:03d} Depth Difference Maps and Valid Mask", fontsize=16)
+            # plt.tight_layout()
+            # plt.show()
+
+
+
+            # Mean depth deltas over the common valid support.
+            rs_diff_valid = rs_diff_map[zv_valid]
+            zv_diff_valid = zv_diff_map[zv_valid]
+            rs_depth_diff[idx] = float(np.mean(rs_diff_valid))
+            zv_depth_diff[idx] = float(np.mean(zv_diff_valid))
+
+            # Fit a plane to each difference map and use fit residual RMSE as error.
+            rs_plane_fit = fit_plane_and_compute_error(rs_diff_map, zv_valid)
+            zv_plane_fit = fit_plane_and_compute_error(zv_diff_map, zv_valid)
+            rs_depth_rsme[idx] = rs_plane_fit["rmse_mm"]
+            zv_depth_rsme[idx] = zv_plane_fit["rmse_mm"]
+            # old code
+            #rs_depth_rsme[idx] = np.sqrt(np.mean((rs_diff - rs_depth_diff[idx])**2))
+            #zv_depth_rsme[idx] = np.sqrt(np.mean((zv_diff - zv_depth_diff[idx])**2))            
+
+    sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, zv_depth_diff, rs_rsme_mm=rs_depth_rsme, zv_rsme_mm=zv_depth_rsme)
 
     sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, zv_depth_diff, ffs_depth_diff, ftn_depth_diff)
     plot_depth_scale_regression(sm, out_path=Path(DEFAULT_OUT) / "depth_scale_comparison.png", title="Depth Scale Comparison")
@@ -1060,7 +1090,7 @@ if __name__ == '__main__':
     #main()
 
     # 4. inbolt with ffs
-    #main_inbolt_ffs_graphs()
+    main_inbolt_ffs_graphs()
 
     # 5. inbolt with zivid projection
     main_inbolt_graphs_with_projection()
