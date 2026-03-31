@@ -89,7 +89,8 @@ class DataSource:
         self.gray_scale_input = gray_scale_input
         self.imgs = []
 
-        IGNORED_SESSIONS = {'dataset_y16_freedrive', 'dataset_y8_freedrive'}
+        #IGNORED_SESSIONS = {'dataset_y16_freedrive', 'dataset_y8_freedrive'}
+        IGNORED_SESSIONS = {'dataset_y16_freedrive','dataset_depth_bias'}
 
         # Each immediate sub-directory is a session
         try:
@@ -243,7 +244,7 @@ class DataSource:
         output_str["metadata_zv"] = metadata_zv
 
         if debug:
-            img_list = [left_img, right_img, depth_rs, depth_zivid]
+            img_list = [left_img, right_img, depth_rs, depth_zivid_projected]
             ttl_list = ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth Zivid (mm)']
             if rgb_img.size > 0:
                 img_list.append(rgb_img)
@@ -266,7 +267,7 @@ class DataSource:
     def show_subset(self, img_list, ttl_list, vmin=None, vmax=None, save_path='', fig_name=''):
         """Display a list of images in a grid."""
         img_num = len(img_list)
-        col_num = min(img_num, 4)
+        col_num = min(img_num, 3)
         row_num = (img_num + col_num - 1) // col_num
         fig, axes = plt.subplots(row_num, col_num, sharey=True, sharex=True)
         axes = np.array(axes).reshape(row_num, col_num)
@@ -434,10 +435,11 @@ class TestDataSource(unittest.TestCase):
         p       = DataSource()
         img_num = p.init_directory(r'C:\Work\Data\Depth\Data Collection')
         self.assertTrue(img_num > 0)
-        out = p.get_item_projected(0, debug=True)
+        out = p.get_item_projected(5, debug=False)
+        err = p.compute_depth_error(out["depth_rs"], out["depth_zivid"])
         self.assertTrue(len(out["left"]) > 0)
-        p.show_subset([out["left"], out["right"], out["depth_zivid"], out["depth_rs"]],
-                          ['left (RS)', 'right (RS)', 'depth Zivid (mm)', 'depth RS (mm)'])
+        p.show_subset([out["left"], out["right"], out["depth_zivid"], out["depth_rs"], err],
+                          ['left (RS)', 'right (RS)', 'depth Zivid (mm)', 'depth RS (mm)', 'error (mm)'])
         plt.show()
 
 

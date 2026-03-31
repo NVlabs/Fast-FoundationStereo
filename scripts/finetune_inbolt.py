@@ -39,7 +39,7 @@ INBOLT_DIR   = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datase
 MODEL_PATH = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
 OUT_PATH   = f'{code_dir}/../weights/20-30-48/model_finetuned_inbolt.pth'
 
-BF         = 50*385.73  # D435 - focal_px * baseline_mm (calibrated from camera)
+BF         = 49.8624*385.73  # D435 - focal_px * baseline_mm (calibrated from camera)  # D435 - focal_px * baseline_mm (calibrated from camera)
 EPOCHS     = 30
 LR         = 2e-5
 ITERS      = 8          # GRU iterations (same as inference)
@@ -58,10 +58,10 @@ class InboltDataset(Dataset):
         return len(self.source.imgs)
 
     def __getitem__(self, idx):
-        data  = self.source.get_item(idx)
+        data  = self.source.get_item_projected(idx)
         left  = data['left']
         right = data['right']
-        depth = data['depth_faro']   # float32, mm  (Zivid resolution)
+        depth = data['depth_zivid']   # float32, mm  (Zivid resolution)
 
         # Resize Zivid depth to match RealSense stereo image resolution
         h, w  = left.shape[:2]
