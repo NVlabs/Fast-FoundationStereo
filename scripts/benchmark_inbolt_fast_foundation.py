@@ -303,7 +303,7 @@ def _to_1d_float_array(values, name: str) -> np.ndarray:
 def fit_depth_scale_regression(
     gt_delta_mm,
     measured_delta_mm,
-    fit_intercept: bool = False,
+    fit_intercept: bool = True,
 ) -> dict:
     """Fit a linear depth-scale regression and compute residual statistics.
 
@@ -476,7 +476,7 @@ def plot_depth_scale_regression(
     series_map: dict,
     out_path: Path,
     title: str = "Depth Scale Regression — dataset_depth_bias",
-    fit_intercept: bool = False,
+    fit_intercept: bool = True,
     ideal_slope: float = 1.0,
 ):
     """Create the two-panel regression + residuals figure from paired series.
@@ -835,7 +835,7 @@ def main_inbolt_ffs_graphs_with_projection():
 
 
     #import cv2 as _cv2   # local import to avoid top-level dependency if already imported
-    gt_depth_diff = np.arange(n)*100 # mm
+    gt_depth_diff = np.arange(n)*1 # when drive no meaning for gt depth diff, just want to see the scale of the error, so set to 1 mm
     rs_depth_diff = np.arange(n)*0 # mm
     zv_depth_diff = np.arange(n)*0 # zivid mm
     ffs_depth_diff = np.arange(n)*0 # ffs mm
@@ -889,12 +889,18 @@ def main_inbolt_ffs_graphs_with_projection():
         # plt.tight_layout()
         # plt.show()
 
+        zv_depth_diff[idx] = np.mean(zv_zv_error) 
+        rs_depth_diff[idx] = np.mean(rs_zv_error)
+        ffs_depth_diff[idx] = np.mean(ffs_zv_error)
+        ftn_depth_diff[idx] = np.mean(ftn_zv_error)        
+
         zv_depth_rsme[idx] = np.sqrt(np.mean(zv_zv_error**2)) 
         rs_depth_rsme[idx] = np.sqrt(np.mean(rs_zv_error**2))
         ffs_depth_rsme[idx] = np.sqrt(np.mean(ffs_zv_error**2))
         ftn_depth_rsme[idx] = np.sqrt(np.mean(ftn_zv_error**2))
            
-    sm = build_example_depth_scale_regression_series(zv_zv_error, rs_zv_error, zv_zv_error, ffs_zv_error, ftn_zv_error, rs_rsme_mm=rs_depth_rsme, zv_rsme_mm=zv_depth_rsme, fs_rsme_mm=ffs_depth_rsme, ft_rsme_mm=ftn_depth_rsme)
+    
+    sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, rs_depth_diff, ffs_depth_diff, ftn_depth_diff, rs_rsme_mm=rs_depth_rsme, zv_rsme_mm=zv_depth_rsme, fs_rsme_mm=ffs_depth_rsme, ft_rsme_mm=ftn_depth_rsme)
     plot_depth_scale_regression(sm, out_path=Path(DEFAULT_OUT) / "depth_scale_comparison.png", title="Depth Scale Comparison")
 
     logging.info(f"All outputs written to {out_dir}")

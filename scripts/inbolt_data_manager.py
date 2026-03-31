@@ -261,7 +261,7 @@ class DataSource:
         mask = np.ones_like(depth_pred, dtype=bool) if depth_mask is None else depth_mask
         valid = np.logical_and(depth_gt > 0, mask)
         valid = np.logical_and(depth_pred > 0, valid)
-        depth_error[valid] = np.abs(depth_pred[valid] - depth_gt[valid])
+        depth_error[valid] = (depth_pred[valid] - depth_gt[valid])
         return depth_error
 
     def show_subset(self, img_list, ttl_list, vmin=None, vmax=None, save_path='', fig_name=''):
