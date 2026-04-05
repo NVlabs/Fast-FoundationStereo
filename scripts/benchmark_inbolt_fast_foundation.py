@@ -522,7 +522,7 @@ def plot_depth_scale_regression(
         max_x = max(max_x, float(np.max(result["gt_delta_mm"])))
         max_y = max(max_y, float(np.max(result["measured_delta_mm"])))
 
-    lim = max(max_x, max_y)
+    lim = max_x #max(max_x, max_y)
     fit_x = np.linspace(0.0, lim, 200)
 
     for result in fit_results:
@@ -536,18 +536,18 @@ def plot_depth_scale_regression(
         rmse = result["rmse_mm"]
         print(rmse)
 
-        axes[0].scatter(x, y, color=color, marker=marker, s=70, label=f"{label} (raw)", zorder=3)
-        axes[0].plot(
-            fit_x,
-            slope * fit_x + intercept,
-            color=color,
-            linewidth=2.0,
-            label=(
-                f"{label} fit: slope={slope:.3f}, intercept={intercept:.1f}mm"
-                if fit_intercept else
-                f"{label} fit: slope={slope:.3f}"
-            ),
-        )
+        axes[0].scatter(x, y-x, color=color, marker=marker, s=70, label=f"{label} (raw)", zorder=3)
+        # axes[0].plot(
+        #     fit_x,
+        #     slope * fit_x + intercept,
+        #     color=color,
+        #     linewidth=2.0,
+        #     label=(
+        #         f"{label} fit: slope={slope:.3f}, intercept={intercept:.1f}mm"
+        #         if fit_intercept else
+        #         f"{label} fit: slope={slope:.3f}"
+        #     ),
+        # )
 
         axes[1].scatter(
             x,
@@ -568,16 +568,17 @@ def plot_depth_scale_regression(
     #     linewidth=1.5,
     #     label=f"ideal (slope={ideal_slope:.1f})",
     # )
+    axes[0].axhline(0.0, linestyle="--", color="gray", linewidth=1.2)
     axes[0].set_xlabel("Ground Truth Delta (mm)")
-    axes[0].set_ylabel("Measured Depth Delta (mm)")
-    axes[0].set_title("Floor Depth Delta: Measured vs Ground Truth")
+    axes[0].set_ylabel("Measured Depth Delta (mm) - Ground Truth Delta (mm)")
+    axes[0].set_title("Depth Delta: Measured from Ground Truth")
     axes[0].grid(True, alpha=0.3)
     axes[0].legend(fontsize=9, loc="upper left")
 
     axes[1].axhline(0.0, linestyle="--", color="gray", linewidth=1.2)
     axes[1].set_xlabel("Ground Truth Delta (mm)")
-    axes[1].set_ylabel("Residual (mm)")
-    axes[1].set_title("Residuals (Measured − Fit)")
+    axes[1].set_ylabel("Residual RMSE (mm)")
+    axes[1].set_title("Residuals (Measured − Plane Fit)")
     axes[1].grid(True, alpha=0.3)
     axes[1].legend(fontsize=9, loc="upper left")
 
@@ -586,8 +587,9 @@ def plot_depth_scale_regression(
 
     residual_values = np.concatenate([r["residuals_mm"] for r in fit_results])
     residual_abs_max = max(1.0, float(np.max(np.abs(residual_values))))
-    residual_abs_max = 50
-    axes[1].set_ylim(-residual_abs_max * 1.15, residual_abs_max * 1.15)
+    residual_abs_max = 60
+    axes[0].set_ylim(-20, 70)
+    axes[1].set_ylim(-20, 70)
 
     fig.suptitle(title, fontsize=18, fontweight="bold")
     plt.tight_layout(rect=[0, 0, 1, 0.96])
@@ -953,15 +955,16 @@ def main_inbolt_ffs_graphs_with_projection_biased_dataset():
             rs_ref = rs_mm
             fs_ref = ffs_mm
             ft_ref = ftn_mm
- 
-        zv_valid           = (0 < zv_prj_mm) & (zv_ref > 0)
-        zv_valid           = (zv_prj_mm > zv_prj_mm[zv_valid].max()*0.8)  
-        rs_valid           = (0 < rs_mm) & (rs_ref > 0)
-        rs_valid           = (rs_mm > rs_mm[rs_valid].max()*0.8)
-        fs_valid           = (0 < ffs_mm) & (fs_ref > 0)
-        fs_valid           = (ffs_mm > ffs_mm[fs_valid].max()*0.8)
-        ft_valid           = (0 < ftn_mm) & (ft_ref > 0)
-        ft_valid           = (ftn_mm > ftn_mm[ft_valid].max()*0.8)
+        
+
+        zv_valid           = (10 < zv_prj_mm) 
+        zv_valid           = (zv_prj_mm < (zv_prj_mm[zv_valid].min()*1.0+50)) & zv_valid
+        rs_valid           = (10 < rs_mm) 
+        rs_valid           = (rs_mm < (rs_mm[rs_valid].min()*1.0+100)) & rs_valid & zv_valid
+        fs_valid           = (10 < ffs_mm)
+        fs_valid           = (ffs_mm < ffs_mm[fs_valid].min()*1.0+100) & fs_valid & zv_valid
+        ft_valid           = (10 < ftn_mm) 
+        ft_valid           = (ftn_mm < ftn_mm[ft_valid].min()*1.0+100) & ft_valid & zv_valid
 
         zv_zv_error         = source.compute_depth_error(zv_prj_mm, zv_ref, depth_mask= zv_valid)
         rs_zv_error         = source.compute_depth_error(rs_mm,     rs_ref, depth_mask= rs_valid)
@@ -969,26 +972,41 @@ def main_inbolt_ffs_graphs_with_projection_biased_dataset():
         ftn_zv_error        = source.compute_depth_error(ftn_mm,    ft_ref, depth_mask= ft_valid)
 
         # debug
-        # img_list = [left, right, rs_mm, zv_prj_mm, ffs_mm, ftn_mm]
-        # ttl_list = ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth Zivid (mm)', 'depth FFS (mm)', 'depth FTN (mm)']
-        # source.show_subset(img_list, ttl_list, save_path=DEFAULT_OUT , fig_name = f"sample_{idx:03d}_inputs.png")
-        img_list = [zv_zv_error, rs_zv_error, ffs_zv_error, ftn_zv_error]
-        ttl_list = ['Zivid Error', 'RS Error', 'FFS Error', 'FTN Error']
-        source.show_subset(img_list, ttl_list, vmin=-100, vmax=100, save_path=DEFAULT_OUT , fig_name = f"error_{idx:03d}_inputs.png")
+        img_list = [left, right, rs_mm, zv_prj_mm, ffs_mm, ftn_mm]
+        ttl_list = ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth Zivid (mm)', 'depth FFS (mm)', 'depth FTN (mm)']
+        source.show_subset(img_list, ttl_list, save_path=DEFAULT_OUT , fig_name = f"sample_{idx:03d}_inputs")
+        img_list            = [zv_zv_error, rs_zv_error, ffs_zv_error, rs_valid.astype(np.float32)*100]
+        ttl_list            = ['Zivid Error', 'RS Error', 'FFS Error', 'RS Valid Mask']
+        source.show_subset(img_list, ttl_list, vmin=0, vmax=500, save_path=DEFAULT_OUT , fig_name = f"error_{idx:03d}_inputs")
 
-        zv_depth_diff[idx] = np.mean(zv_zv_error) 
-        rs_depth_diff[idx] = np.mean(rs_zv_error)
-        ffs_depth_diff[idx] = np.mean(ffs_zv_error)
-        ftn_depth_diff[idx] = np.mean(ftn_zv_error)        
+        zv_count            = np.sum(zv_valid)
+        rs_count            = np.sum(rs_valid)
+        fs_count            = np.sum(fs_valid)
+        ft_count            = np.sum(ft_valid)
 
-        zv_depth_rsme[idx] = np.sqrt(np.mean(zv_zv_error**2)) 
-        rs_depth_rsme[idx] = np.sqrt(np.mean(rs_zv_error**2))
-        ffs_depth_rsme[idx] = np.sqrt(np.mean(ffs_zv_error**2))
-        ftn_depth_rsme[idx] = np.sqrt(np.mean(ftn_zv_error**2))
+        zv_depth_diff[idx]   = np.sum(zv_zv_error) / zv_count
+        rs_depth_diff[idx]   = np.sum(rs_zv_error) / rs_count
+        ffs_depth_diff[idx]  = np.sum(ffs_zv_error) / fs_count
+        ftn_depth_diff[idx]  = np.sum(ftn_zv_error) / ft_count        
+
+        # zv_depth_rsme[idx]  = np.sqrt(np.sum(zv_zv_error**2) / zv_count)
+        # rs_depth_rsme[idx]  = np.sqrt(np.sum(rs_zv_error**2) / rs_count)
+        # ffs_depth_rsme[idx] = np.sqrt(np.sum(ffs_zv_error**2) / fs_count)
+        # ftn_depth_rsme[idx] = np.sqrt(np.sum(ftn_zv_error**2) / ft_count)
+
+        # Fit a plane to each difference map and use fit residual RMSE as error.
+        zv_plane_fit         = fit_plane_and_compute_error(zv_zv_error, zv_valid)        
+        rs_plane_fit         = fit_plane_and_compute_error(rs_zv_error, rs_valid)
+        ffs_plane_fit        = fit_plane_and_compute_error(ffs_zv_error, fs_valid)        
+        ftn_plane_fit        = fit_plane_and_compute_error(ftn_zv_error, ft_valid)
+        rs_depth_rsme[idx]   = rs_plane_fit["rmse_mm"]
+        zv_depth_rsme[idx]   = zv_plane_fit["rmse_mm"]
+        ffs_depth_rsme[idx]  = ffs_plane_fit["rmse_mm"]
+        ftn_depth_rsme[idx]  = ftn_plane_fit["rmse_mm"]
            
     
-    sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, rs_depth_diff, ffs_depth_diff, ftn_depth_diff, rs_rsme_mm=rs_depth_rsme, zv_rsme_mm=zv_depth_rsme, fs_rsme_mm=ffs_depth_rsme, ft_rsme_mm=ftn_depth_rsme)
-    plot_depth_scale_regression(sm, out_path=Path(DEFAULT_OUT) / "depth_noise_comparison_ffs.png", title="Depth Noise Comparison")
+    sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, zv_depth_diff, ffs_depth_diff, ftn_depth_diff, rs_rsme_mm=rs_depth_rsme, zv_rsme_mm=zv_depth_rsme, fs_rsme_mm=ffs_depth_rsme, ft_rsme_mm=ftn_depth_rsme)
+    plot_depth_scale_regression(sm, out_path=Path(DEFAULT_OUT) / "depth_comparison_zivid_rs_ffs.png", title="Depth Comparison")
 
     logging.info(f"All outputs written to {out_dir}")
 
