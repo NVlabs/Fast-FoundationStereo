@@ -13,3 +13,4 @@ weights/*
 output/
 .claude/
 *.ply
+data/mono/*

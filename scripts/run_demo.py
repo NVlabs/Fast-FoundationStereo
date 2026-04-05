@@ -24,10 +24,12 @@ if __name__=="__main__":
   code_dir = os.path.dirname(os.path.realpath(__file__))
   parser = argparse.ArgumentParser()
   parser.add_argument('--model_dir', default=f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth', type=str)
-  parser.add_argument('--left_file', default=f'{code_dir}/../demo_data/left.png', type=str)
-  parser.add_argument('--right_file', default=f'{code_dir}/../demo_data/right.png', type=str)
+  parser.add_argument('--left_file', default=f'{code_dir}/../data/mono/img0074.jpg', type=str)
+  parser.add_argument('--right_file', default=f'{code_dir}/../data/mono/img0076.jpg', type=str)  
+  #parser.add_argument('--left_file', default=f'{code_dir}/../demo_data/left.png', type=str)
+  #parser.add_argument('--right_file', default=f'{code_dir}/../demo_data/right.png', type=str)
   parser.add_argument('--intrinsic_file', default=f'{code_dir}/../demo_data/K.txt', type=str, help='camera intrinsic matrix and baseline file')
-  parser.add_argument('--out_dir', default='/home/bowen/debug/stereo_output', type=str)
+  parser.add_argument('--out_dir', default=f'{code_dir}/../demo_data_out', type=str)
   parser.add_argument('--remove_invisible', default=1, type=int)
   parser.add_argument('--denoise_cloud', default=0, type=int)
   parser.add_argument('--denoise_nb_points', type=int, default=30, help='number of points to consider for radius outlier removal')
@@ -44,7 +46,7 @@ if __name__=="__main__":
   set_seed(0)
   torch.autograd.set_grad_enabled(False)
 
-  os.system(f'rm -rf {args.out_dir} && mkdir -p {args.out_dir}')
+  #os.system(f'rm -rf {args.out_dir} && mkdir -p {args.out_dir}')
 
   with open(f'{os.path.dirname(args.model_dir)}/cfg.yaml', 'r') as ff:
     cfg:dict = yaml.safe_load(ff)
@@ -99,7 +101,7 @@ if __name__=="__main__":
   max_val = None
   vis = vis_disparity(disp, min_val=min_val, max_val=max_val, cmap=cmap, color_map=cv2.COLORMAP_TURBO)
   vis = np.concatenate([img0_ori, img1_ori, vis], axis=1)
-  #imageio.imwrite(f'{args.out_dir}/disp_vis.png', vis)
+  imageio.imwrite(f'{args.out_dir}/disp_0074.png', vis)
   s = 1280/vis.shape[1]
   resized_vis = cv2.resize(vis, (int(vis.shape[1]*s), int(vis.shape[0]*s)))
   cv2.imshow('disp', resized_vis[:,:,::-1])

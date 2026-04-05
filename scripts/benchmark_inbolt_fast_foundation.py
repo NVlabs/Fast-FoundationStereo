@@ -560,14 +560,14 @@ def plot_depth_scale_regression(
         )
     
 
-    axes[0].plot(
-        fit_x,
-        ideal_slope * fit_x,
-        linestyle="--",
-        color="gray",
-        linewidth=1.5,
-        label=f"ideal (slope={ideal_slope:.1f})",
-    )
+    # axes[0].plot(
+    #     fit_x,
+    #     ideal_slope * fit_x,
+    #     linestyle="--",
+    #     color="gray",
+    #     linewidth=1.5,
+    #     label=f"ideal (slope={ideal_slope:.1f})",
+    # )
     axes[0].set_xlabel("Ground Truth Delta (mm)")
     axes[0].set_ylabel("Measured Depth Delta (mm)")
     axes[0].set_title("Floor Depth Delta: Measured vs Ground Truth")
@@ -846,7 +846,7 @@ def main_inbolt_ffs_graphs_with_projection():
     ftn_depth_rsme = np.arange(n)*0 # zivid mm        
 
     for idx in range(n):
-        data            = source.get_item_projected(idx)
+        data            = source.get_item(idx)
         left            = data['left']
         right           = data['right']
         zv_mm           = data['depth_zivid'].astype(np.float32)   # Zivid GT in mm
@@ -855,7 +855,7 @@ def main_inbolt_ffs_graphs_with_projection():
         ftn_mm          = infer_depth_rs_mm(models["finetuned"], left, right)
    
         # project zivid on rs
-        zv_prj_mm       = zv_mm #project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
+        zv_prj_mm       = project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
 
         rs_valid        = (10 < rs_mm) 
         zv_valid        = (10 < zv_prj_mm) 
@@ -867,11 +867,13 @@ def main_inbolt_ffs_graphs_with_projection():
         ffs_zv_error    = source.compute_depth_error(ffs_mm,    zv_prj_mm, depth_mask=zv_valid & ffs_valid)
         ftn_zv_error    = source.compute_depth_error(ftn_mm,    zv_prj_mm, depth_mask=zv_valid & ftn_valid)
 
-        # # debug
+        # debug
         # img_list = [left, right, rs_mm, zv_prj_mm, ffs_mm, ftn_mm]
         # ttl_list = ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth Zivid (mm)', 'depth FFS (mm)', 'depth FTN (mm)']
         # source.show_subset(img_list, ttl_list, save_path=DEFAULT_OUT , fig_name = f"sample_{idx:03d}_inputs.png")
-
+        img_list = [zv_zv_error, rs_zv_error, ffs_zv_error, ftn_zv_error]
+        ttl_list = ['Zivid Error', 'RS Error', 'FFS Error', 'FTN Error']
+        source.show_subset(img_list, ttl_list, save_path=DEFAULT_OUT , fig_name = f"error_{idx:03d}_inputs.png")
 
         zv_depth_diff[idx] = np.mean(zv_zv_error) 
         rs_depth_diff[idx] = np.mean(rs_zv_error)
@@ -885,9 +887,111 @@ def main_inbolt_ffs_graphs_with_projection():
            
     
     sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, rs_depth_diff, ffs_depth_diff, ftn_depth_diff, rs_rsme_mm=rs_depth_rsme, zv_rsme_mm=zv_depth_rsme, fs_rsme_mm=ffs_depth_rsme, ft_rsme_mm=ftn_depth_rsme)
-    plot_depth_scale_regression(sm, out_path=Path(DEFAULT_OUT) / "depth_scale_comparison.png", title="Depth Scale Comparison")
+    plot_depth_scale_regression(sm, out_path=Path(DEFAULT_OUT) / "depth_scale_comparison_ffs.png", title="Depth Scale Comparison")
 
     logging.info(f"All outputs written to {out_dir}")
+
+def main_inbolt_ffs_graphs_with_projection_biased_dataset():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--out_dir', default=DEFAULT_OUT, help='Output directory for the report')
+    parser.add_argument('--data_dir', default=DATA_DIR, help='Path to dataset root')
+    parser.add_argument('--original', default=MODEL_PATH, help='Path to original model weights')
+    parser.add_argument('--finetuned', default=FINETUNED_PATH, help='Path to fine-tuned model weights')
+    parser.add_argument('--n_viz', type=int, default=N_VIZ, help='Frames saved for visual comparison')
+    args = parser.parse_args()
+
+    U.set_logging_format()
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── dataset ───────────────────────────────────────────────────────────────
+    source      = DataSource()
+    n           = source.init_directory(input_rectified=args.data_dir)
+    logging.info(f"Found {n} samples in {args.data_dir}")
+    if n == 0:
+        logging.error("No samples found — check DATA_DIR path")
+        return
+    
+    # ── load models ──────────────────────────────────────────────────────────
+    models = {}
+    if Path(args.finetuned).exists():
+        models["finetuned"] = load_model(args.finetuned)
+    else:
+        logging.warning(f"Fine-tuned model not found at {args.finetuned} — skipping")
+
+    models["original"] = load_model(args.original)    
+
+
+    #import cv2 as _cv2   # local import to avoid top-level dependency if already imported
+    gt_depth_diff = np.arange(n)*100 # when drive no meaning for gt depth diff, just want to see the scale of the error, so set to 1 mm
+    rs_depth_diff = np.arange(n)*0 # mm
+    zv_depth_diff = np.arange(n)*0 # zivid mm
+    ffs_depth_diff = np.arange(n)*0 # ffs mm
+    ftn_depth_diff = np.arange(n)*0 # ftn mm
+    rs_depth_rsme = np.arange(n)*0 # mm
+    zv_depth_rsme = np.arange(n)*0 # zivid mm
+    ffs_depth_rsme = np.arange(n)*0 # mm
+    ftn_depth_rsme = np.arange(n)*0 # zivid mm        
+    rs_ref = None
+    zv_ref = None
+    fs_ref = None
+    ft_ref = None    
+    for idx in range(n):
+        data            = source.get_item(idx)
+        left            = data['left']
+        right           = data['right']
+        zv_mm           = data['depth_zivid'].astype(np.float32)   # Zivid GT in mm
+        rs_mm           = data['depth_rs'].astype(np.float32)   # RealSense depth in mm
+        ffs_mm          = infer_depth_rs_mm(models["original"], left, right)
+        ftn_mm          = infer_depth_rs_mm(models["finetuned"], left, right)
+   
+        # project zivid on rs
+        zv_prj_mm       = project_depth_zivid_to_rs(zv_mm, rs_mm, finx = idx)
+
+        if idx == 0:
+            zv_ref = zv_prj_mm
+            rs_ref = rs_mm
+            fs_ref = ffs_mm
+            ft_ref = ftn_mm
+ 
+        zv_valid           = (0 < zv_prj_mm) & (zv_ref > 0)
+        zv_valid           = (zv_prj_mm > zv_prj_mm[zv_valid].max()*0.8)  
+        rs_valid           = (0 < rs_mm) & (rs_ref > 0)
+        rs_valid           = (rs_mm > rs_mm[rs_valid].max()*0.8)
+        fs_valid           = (0 < ffs_mm) & (fs_ref > 0)
+        fs_valid           = (ffs_mm > ffs_mm[fs_valid].max()*0.8)
+        ft_valid           = (0 < ftn_mm) & (ft_ref > 0)
+        ft_valid           = (ftn_mm > ftn_mm[ft_valid].max()*0.8)
+
+        zv_zv_error         = source.compute_depth_error(zv_prj_mm, zv_ref, depth_mask= zv_valid)
+        rs_zv_error         = source.compute_depth_error(rs_mm,     rs_ref, depth_mask= rs_valid)
+        ffs_zv_error        = source.compute_depth_error(ffs_mm,    fs_ref, depth_mask= fs_valid)
+        ftn_zv_error        = source.compute_depth_error(ftn_mm,    ft_ref, depth_mask= ft_valid)
+
+        # debug
+        # img_list = [left, right, rs_mm, zv_prj_mm, ffs_mm, ftn_mm]
+        # ttl_list = ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth Zivid (mm)', 'depth FFS (mm)', 'depth FTN (mm)']
+        # source.show_subset(img_list, ttl_list, save_path=DEFAULT_OUT , fig_name = f"sample_{idx:03d}_inputs.png")
+        img_list = [zv_zv_error, rs_zv_error, ffs_zv_error, ftn_zv_error]
+        ttl_list = ['Zivid Error', 'RS Error', 'FFS Error', 'FTN Error']
+        source.show_subset(img_list, ttl_list, vmin=-100, vmax=100, save_path=DEFAULT_OUT , fig_name = f"error_{idx:03d}_inputs.png")
+
+        zv_depth_diff[idx] = np.mean(zv_zv_error) 
+        rs_depth_diff[idx] = np.mean(rs_zv_error)
+        ffs_depth_diff[idx] = np.mean(ffs_zv_error)
+        ftn_depth_diff[idx] = np.mean(ftn_zv_error)        
+
+        zv_depth_rsme[idx] = np.sqrt(np.mean(zv_zv_error**2)) 
+        rs_depth_rsme[idx] = np.sqrt(np.mean(rs_zv_error**2))
+        ffs_depth_rsme[idx] = np.sqrt(np.mean(ffs_zv_error**2))
+        ftn_depth_rsme[idx] = np.sqrt(np.mean(ftn_zv_error**2))
+           
+    
+    sm = build_example_depth_scale_regression_series(gt_depth_diff, rs_depth_diff, rs_depth_diff, ffs_depth_diff, ftn_depth_diff, rs_rsme_mm=rs_depth_rsme, zv_rsme_mm=zv_depth_rsme, fs_rsme_mm=ffs_depth_rsme, ft_rsme_mm=ftn_depth_rsme)
+    plot_depth_scale_regression(sm, out_path=Path(DEFAULT_OUT) / "depth_noise_comparison_ffs.png", title="Depth Noise Comparison")
+
+    logging.info(f"All outputs written to {out_dir}")
+
 
 # ── main ─────────────────────────────────────────────────────────────────────
 
@@ -1073,7 +1177,10 @@ if __name__ == '__main__':
     #main()
 
     # 4. inbolt with ffs
-    main_inbolt_ffs_graphs_with_projection()
+    #main_inbolt_ffs_graphs_with_projection()
 
     # 5. inbolt with zivid projection
     #main_inbolt_graphs_with_projection()
+
+    # 6. inbolt with zivid projection on biased dataset
+    main_inbolt_ffs_graphs_with_projection_biased_dataset()
