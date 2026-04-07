@@ -955,6 +955,12 @@ def main_inbolt_ffs_graphs_with_projection_biased_dataset():
             rs_ref = rs_mm
             fs_ref = ffs_mm
             ft_ref = ftn_mm
+
+        # save ply of the point cloud for visualization 
+        if idx == 1:
+            XYZ_FS = project_camera_to_3d(ffs_mm, CAMERA_MATRIX_RS, DIST_COEFFS_RS)
+            # save to ply point cloud for visualization
+            save_to_ply(XYZ_FS/1000, f'ffs_projected_points_{idx:03d}.ply') # save in meters for visualization
         
 
         zv_valid           = (10 < zv_prj_mm) 
@@ -972,8 +978,8 @@ def main_inbolt_ffs_graphs_with_projection_biased_dataset():
         ftn_zv_error        = source.compute_depth_error(ftn_mm,    ft_ref, depth_mask= ft_valid)
 
         # debug
-        img_list = [left, right, rs_mm, zv_prj_mm, ffs_mm, ftn_mm]
-        ttl_list = ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth Zivid (mm)', 'depth FFS (mm)', 'depth FTN (mm)']
+        img_list            = [left, right, rs_mm, zv_prj_mm, ffs_mm, ftn_mm]
+        ttl_list            = ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth Zivid (mm)', 'depth FFS (mm)', 'depth FTN (mm)']
         source.show_subset(img_list, ttl_list, save_path=DEFAULT_OUT , fig_name = f"sample_{idx:03d}_inputs")
         img_list            = [zv_zv_error, rs_zv_error, ffs_zv_error, rs_valid.astype(np.float32)*100]
         ttl_list            = ['Zivid Error', 'RS Error', 'FFS Error', 'RS Valid Mask']
