@@ -44,7 +44,7 @@ import unittest
 import logging as log
 import yaml
 
-from object_chessboard import ChessboardPattern
+from object_chessboard import ObjectChessboard
 
 # --------------------------------
 # 405 / 1280x720
@@ -63,7 +63,7 @@ class DataSource:
 
     def __init__(self):
         self.gray_scale_input   = False
-        self.depth_estimator    = ChessboardPattern()  # for synthetic GT depth estimation from chessboard pattern
+        self.depth_estimator    = ObjectChessboard()  # for synthetic GT depth estimation from chessboard pattern
         self.imgs               = []   # list of dicts: {packed_png}
         log.info('Source is defined')
 
@@ -127,11 +127,7 @@ class DataSource:
         depth_rs  = packed_img[:, :, 2].astype(np.float32)
 
         # Synthetic GT can be computed from chessboard if available;
-        result = self.depth_estimator.estimate_camera_pose(left_img, camera_matrix = CAMERA_MATRIX_RS, dist_coeffs = DIST_COEFFS_RS)
-        if result["success"]:
-            depth_syn = self.depth_estimator.compute_synthetic_depth(left_img, camera_matrix = CAMERA_MATRIX_RS, dist_coeffs = DIST_COEFFS_RS)
-        # keep zeros-by-default as documented ("empty / zeros if absent").
-        depth_syn = np.zeros_like(depth_rs, dtype=np.float32)
+        depth_syn                 = self.get_synthetic_depth(left_img)
 
         output_str["left"]        = left_img
         output_str["right"]       = right_img
@@ -145,6 +141,22 @@ class DataSource:
 
         return output_str
     
+    def get_synthetic_depth(self, left_img):
+        """Compute synthetic depth from chessboard pattern in the left image."""
+        result = self.depth_estimator.estimate_camera_pose(left_img, camera_matrix = CAMERA_MATRIX_RS, dist_coeffs = DIST_COEFFS_RS)
+        if result["success"]:
+            XYZ, projected_points = self.depth_estimator.get_grid_in_camera_coordinates(
+                rvec=result['rvec'],
+                tvec=result['tvec'],
+                camera_matrix=CAMERA_MATRIX_RS,
+                dist_coeffs=DIST_COEFFS_RS
+            )
+            depth_syn = self.project_3d_to_camera(XYZ, CAMERA_MATRIX_RS, DIST_COEFFS_RS, frame_size = left_img.shape)  # Project back to image space to get depth map
+            return depth_syn
+        else:
+            log.warning("Failed to estimate camera pose for synthetic depth computation.")
+            return np.zeros_like(left_img, dtype=np.float32)
+
     def get_item_projected(self, index: int, debug: bool = False):
         """Compatibility wrapper for synthetic data; returns the same as get_item."""
         return self.get_item(index=index, debug=debug)
