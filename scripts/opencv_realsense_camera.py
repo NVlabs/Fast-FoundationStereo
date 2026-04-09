@@ -122,6 +122,7 @@ class RealSense(object):
         #     dev                 = ctx.query_devices().front()
         #     safety_sensor       = dev.first_safety_sensor()
         #     safety_sensor.set_option(rs.option.safety_mode, rs.safety_mode.service)
+        self.intr             = self.get_camera_intrinsics(1) # depth intrinsics
 
 
 
@@ -468,7 +469,7 @@ class RealSense(object):
         intr                = pipeline_profile.get_stream(stream_type).as_video_stream_profile().get_intrinsics()
         #print(f'Intrinsics Fx is : {intr.fx} ')
         print(intr)
-        return intr.fx    
+        return intr   
     
     def get_bf(self):
         "read baseline and focal length for inverse depth compute"
