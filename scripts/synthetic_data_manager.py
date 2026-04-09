@@ -356,8 +356,8 @@ class TestDataSource(unittest.TestCase):
 def RunTest():
     tst = TestDataSource()
     #tst.test_init_directory()
-    #tst.test_get_item()
-    tst.test_show_images()
+    tst.test_get_item()
+    #tst.test_show_images()
     #tst.test_get_item_projected()
 
 

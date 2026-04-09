@@ -113,9 +113,9 @@ class ObjectChessboard:
 
         # reduce size
         if len(img.shape) > 2: 
-            gray  = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+            gray  = cv2.cvtColor(img.astype(np.uint8),cv2.COLOR_BGR2GRAY)
         else:
-            gray = img
+            gray = img.astype(np.uint8)
 
         # find the chess board (calibration pattern) corners
         flags           = cv2.CALIB_CB_NORMALIZE_IMAGE | cv2.CALIB_CB_EXHAUSTIVE | cv2.CALIB_CB_ACCURACY
