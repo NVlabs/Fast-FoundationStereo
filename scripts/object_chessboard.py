@@ -43,7 +43,7 @@ class ObjectChessboard:
         self.name               = 'chessboard'
         self.frame              = []
         self.resolution         = (1280,720)
-        self.square_size         = 21.8                  # size in mm of the pattern square         
+        self.square_size         = 21.0                  # size in mm of the pattern square         
         self.debug_on            = True
         self.pattern_size       = (9,6)
         self._rt_plot            = None
@@ -96,7 +96,7 @@ class ObjectChessboard:
         objCorners[:,:2]  = np.mgrid[0:a,0:b].T.reshape(-1,2)*s 
         return objCorners
     
-    def get_grid_points(self, grid_size=1.0):
+    def get_grid_points(self, grid_size=0.1):
         # prepare grid points with step size of 1 mm, 
         # like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
         scale_factor = self.square_size / grid_size

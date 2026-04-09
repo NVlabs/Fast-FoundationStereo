@@ -254,6 +254,7 @@ class DataSource:
         """Project 3D points in camera space back to 2D pixel coordinates."""
         if points_3d.shape[1] != 3:
             raise ValueError("Input points_3d must have shape (N, 3)")
+        
         projected_pts, _ = cv2.projectPoints(
             points_3d.reshape(-1, 1, 3),
             np.zeros(3, dtype=np.float32),
@@ -341,13 +342,13 @@ class TestDataSource(unittest.TestCase):
 
     def test_get_item_projected(self):
         p       = DataSource()
-        img_num = p.init_directory(r'C:\Work\Data\Depth\Data Collection')
+        img_num = p.init_directory()
         self.assertTrue(img_num > 0)
-        out = p.get_item_projected(5, debug=False)
-        err = p.compute_depth_error(out["depth_rs"], out["depth_zivid"])
+        out     = p.get_item_projected(80, debug=False)
+        err     = p.compute_depth_error(out["depth_rs"], out["depth_syn"])
         self.assertTrue(len(out["left"]) > 0)
-        p.show_subset([out["left"], out["right"], out["depth_rs"], err],
-                          ['left (RS)', 'right (RS)', 'depth RS (mm)', 'error (mm)'])
+        p.show_subset([out["left"], out["right"], out["depth_rs"], out["depth_syn"], err],
+                          ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth SYN (mm)', 'error (mm)'], vmax=None)
         plt.show()
 
 
@@ -356,9 +357,9 @@ class TestDataSource(unittest.TestCase):
 def RunTest():
     tst = TestDataSource()
     #tst.test_init_directory()
-    tst.test_get_item()
+    #tst.test_get_item()
     #tst.test_show_images()
-    #tst.test_get_item_projected()
+    tst.test_get_item_projected()
 
 
 if __name__ == '__main__':
