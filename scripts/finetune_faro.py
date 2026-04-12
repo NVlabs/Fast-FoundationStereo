@@ -36,10 +36,10 @@ from faro_data_manager import DataSource
 FARO_DIR   = r'/mnt/algonas/Local/Data/Stereo/Faro/FARO_DATA_BASE'  # local path to the dataset
 MODEL_PATH = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
 OUT_PATH   = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
-MODEL_PATH = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
+#MODEL_PATH = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
 
 BF         = 49470.45   # focal_px * baseline_mm (calibrated from camera)
-EPOCHS     = 5
+EPOCHS     = 10
 LR         = 2e-5
 ITERS      = 8          # GRU iterations (same as inference)
 GAMMA      = 0.9        # sequence loss weight decay
