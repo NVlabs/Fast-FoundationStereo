@@ -14,3 +14,4 @@ output/
 .claude/
 *.ply
 data/mono/*
+reports/*
