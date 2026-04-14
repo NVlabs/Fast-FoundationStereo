@@ -372,23 +372,20 @@ class TrtPostRunner(nn.Module):
     return disp_up
 
 
-class TrtRunner(nn.Module):
-  def __init__(self, args, feature_runner_engine_path, post_runner_engine_path):
+class _BaseTrtRunner(nn.Module):
+  def __init__(self, args):
     super().__init__()
     import tensorrt as trt
     self.args = args
-    with open(feature_runner_engine_path, 'rb') as file:
-      engine_data = file.read()
     self.trt_logger = trt.Logger(trt.Logger.WARNING)
-    self.feature_engine = trt.Runtime(self.trt_logger).deserialize_cuda_engine(engine_data)
-    self.feature_context = self.feature_engine.create_execution_context()
 
-    with open(post_runner_engine_path, 'rb') as file:
+  def load_engine(self, engine_path):
+    import tensorrt as trt
+    with open(engine_path, 'rb') as file:
       engine_data = file.read()
-    self.post_engine = trt.Runtime(self.trt_logger).deserialize_cuda_engine(engine_data)
-    self.post_context = self.post_engine.create_execution_context()
-    self.max_disp = args.max_disp
-    self.cv_group = args.get('cv_group', 8)
+    engine = trt.Runtime(self.trt_logger).deserialize_cuda_engine(engine_data)
+    context = engine.create_execution_context()
+    return engine, context
 
   def trt_dtype_to_torch(self, dt):
     import tensorrt as trt
@@ -429,6 +426,15 @@ class TrtRunner(nn.Module):
     assert ok
     return outputs
 
+
+class TrtRunner(_BaseTrtRunner):
+  def __init__(self, args, feature_runner_engine_path, post_runner_engine_path):
+    super().__init__(args)
+    self.feature_engine, self.feature_context = self.load_engine(feature_runner_engine_path)
+    self.post_engine, self.post_context = self.load_engine(post_runner_engine_path)
+    self.max_disp = args.max_disp
+    self.cv_group = args.get('cv_group', 8)
+
   def forward(self, image1, image2):
     import tensorrt as trt
     feat_out = self.run_trt(self.feature_engine, self.feature_context, {'left': image1, 'right': image2})
@@ -443,3 +449,13 @@ class TrtRunner(nn.Module):
     out = self.run_trt(self.post_engine, self.post_context, post_inputs)
     disp = out['disp']
     return disp
+
+
+class SingleTrtRunner(_BaseTrtRunner):
+  def __init__(self, args, engine_path):
+    super().__init__(args)
+    self.engine, self.context = self.load_engine(engine_path)
+
+  def forward(self, image1, image2):
+    out = self.run_trt(self.engine, self.context, {'left': image1, 'right': image2})
+    return out['disp']
