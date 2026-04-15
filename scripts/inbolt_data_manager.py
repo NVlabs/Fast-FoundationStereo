@@ -42,8 +42,8 @@ import yaml
 # --------------------------------
 
 CAMERA_MATRIX_RS = np.array([
-    [385.7338562011719, 0, 320.17578125],
-    [0, 385.7338562011719, 245.1015167236328],
+    [385.5098876953125, 0, 328.31732177734375],
+    [0, 385.5098876953125, 235.6382141113281],
     [0, 0, 1]
 ])
 
@@ -55,6 +55,18 @@ DIST_COEFFS_RS = np.array([
     -0.0
 ])
 
+CAMERA_MATRIX_ZIVID = np.array([
+    [1241.853637, 0, 609.9444419],
+    [0, 1241.853637, 513.6974808515621],
+    [0, 0, 1]
+])
+DIST_COEFFS_ZIVID = np.array([
+    - 0.04514386132359505,
+    - -0.03609563037753105,
+    - -6.156915333122015e-05,
+    - 0.00015102965699043125,
+    - -0.17297066748142242
+])
 
 
 # --------------------------------
@@ -407,11 +419,11 @@ class TestDataSource(unittest.TestCase):
 
     def test_show_images(self):
         p       = DataSource()
-        img_num = p.init_directory()
+        img_num = p.init_directory(r'C:\Work\Data\Depth\Data Collection-02')
         if img_num == 0:
             log.warning("No images found.")
             return
-        for k in np.random.randint(0, img_num, size=min(4, img_num)):
+        for k in np.random.randint(0, img_num, size=min(8, img_num)):
             out = p.get_item(int(k), debug=True)
             self.assertTrue(len(out["left"]) > 0)
             p.show_subset([out["left"], out["right"], out["depth_zivid"], out["depth_rs"], out["rgb"]],
@@ -421,12 +433,13 @@ class TestDataSource(unittest.TestCase):
 
     def test_get_item_projected(self):
         p       = DataSource()
-        img_num = p.init_directory(r'C:\Work\Data\Depth\Data Collection')
+        img_num = p.init_directory(r'C:\Work\Data\Depth\Data Collection-02')
         self.assertTrue(img_num > 0)
-        out = p.get_item_projected(5, debug=False)
-        err = p.compute_depth_error(out["depth_rs"], out["depth_zivid"])
-        self.assertTrue(len(out["left"]) > 0)
-        p.show_subset([out["left"], out["right"], out["depth_zivid"], out["depth_rs"], err],
+        for k in np.random.randint(0, img_num, size=min(6, img_num)):
+            out = p.get_item_projected(int(k), debug=False)
+            err = p.compute_depth_error(out["depth_rs"], out["depth_zivid"])
+            self.assertTrue(len(out["left"]) > 0)
+            p.show_subset([out["left"], out["right"], out["depth_zivid"], out["depth_rs"], err],
                           ['left (RS)', 'right (RS)', 'depth Zivid (mm)', 'depth RS (mm)', 'error (mm)'])
         plt.show()
 
