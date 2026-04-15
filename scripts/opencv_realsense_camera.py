@@ -122,7 +122,7 @@ class RealSense(object):
         #     dev                 = ctx.query_devices().front()
         #     safety_sensor       = dev.first_safety_sensor()
         #     safety_sensor.set_option(rs.option.safety_mode, rs.safety_mode.service)
-        self.intr             = self.get_camera_intrinsics(3) # depth intrinsics
+        #self.intr             = self.get_camera_intrinsics(3) # depth intrinsics
 
 
 

@@ -662,13 +662,25 @@ class TestObjectChessboard():
 
         # intr = cap.config.resolve(rs_mod.rs.pipeline_wrapper(cap.pipeline)) \
         #     .get_stream(rs_mod.rs.infrared, 1).as_video_stream_profile().get_intrinsics()
-        intr = cap.intr #get_camera_intrinsics(1)
+        # intr = cap.intr #get_camera_intrinsics(1)
+        # camera_matrix = np.array([
+        #     [intr.fx, 0.0, intr.ppx],
+        #     [0.0, intr.fy, intr.ppy],
+        #     [0.0, 0.0, 1.0],
+        # ], dtype=np.float32)
+
+        h, w = 720, 1280
+        fx = 600.0
+        fy = 600.0
+        cx = w / 2.0
+        cy = h / 2.0
         camera_matrix = np.array([
-            [intr.fx, 0.0, intr.ppx],
-            [0.0, intr.fy, intr.ppy],
+            [fx, 0.0, cx],
+            [0.0, fy, cy],
             [0.0, 0.0, 1.0],
-        ], dtype=np.float32)
-        dist_coeffs = np.array(intr.coeffs, dtype=np.float32).reshape(-1, 1)
+        ], dtype=np.float32)        
+        #dist_coeffs = np.array(intr.coeffs, dtype=np.float32).reshape(-1, 1)
+        dist_coeffs = np.zeros((5, 1), dtype=np.float32)
 
         # Use a finite loop for test-style behavior; press 'q' in OpenCV window to exit early.
         try:
