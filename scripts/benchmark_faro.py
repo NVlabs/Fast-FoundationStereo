@@ -41,15 +41,15 @@ from report import ReportGenerator
 FARO_DIR       = r'/mnt/algonas/Local/Data/Stereo/Faro/FARO_DATA_BASE'
 #FARO_DIR       = r'data/faro'  # local path to FARO dataset --- IGNORE ---
 ORIGINAL_PATH  = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
-FINETUNED_PATH = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
-DEFAULT_OUT    = f'{code_dir}/../reports/faro_benchmark_office'
+FINETUNED_PATH = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen_epoch_006_epoch_013.pth'
+DEFAULT_OUT    = f'{code_dir}/../reports/benchmark_faro_office_013'
 
 BF     = 49470.45   # focal_px * baseline_mm  (calibrated from camera)
 ITERS  = 8          # GRU iterations
 N_VIZ  = 5         # number of frames saved for visual comparison in report
 
 METHODS = {
-    "original":  {"label": "Original model",    "color": "#2980b9"},
+    "original":  {"label": "Original model",     "color": "#2980b9"},
     "finetuned": {"label": "Fine-tuned on FARO", "color": "#e74c3c"},
     "faro_gt":   {"label": "FARO GT",            "color": "#27ae60"},
 }
@@ -99,9 +99,9 @@ def load_model(path: str):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--out_dir', default=DEFAULT_OUT, help='Output directory for the report')
-    parser.add_argument('--faro_dir', default=FARO_DIR, help='Path to FARO dataset root')
-    parser.add_argument('--original', default=ORIGINAL_PATH, help='Path to original model weights')
+    parser.add_argument('--out_dir',   default=DEFAULT_OUT, help='Output directory for the report')
+    parser.add_argument('--faro_dir',  default=FARO_DIR, help='Path to FARO dataset root')
+    parser.add_argument('--original',  default=ORIGINAL_PATH, help='Path to original model weights')
     parser.add_argument('--finetuned', default=FINETUNED_PATH, help='Path to fine-tuned model weights')
     parser.add_argument('--n_viz', type=int, default=N_VIZ, help='Frames saved for visual comparison')
     args = parser.parse_args()

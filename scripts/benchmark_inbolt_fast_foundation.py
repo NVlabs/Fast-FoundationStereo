@@ -983,7 +983,7 @@ def main_inbolt_ffs_graphs_with_projection_biased_dataset():
         source.show_subset(img_list, ttl_list, save_path=DEFAULT_OUT , fig_name = f"sample_{idx:03d}_inputs")
         img_list            = [zv_zv_error, rs_zv_error, ffs_zv_error, rs_valid.astype(np.float32)*100]
         ttl_list            = ['Zivid Error', 'RS Error', 'FFS Error', 'RS Valid Mask']
-        source.show_subset(img_list, ttl_list, vmin=0, vmax=500, save_path=DEFAULT_OUT , fig_name = f"error_{idx:03d}_inputs")
+        source.show_subset(img_list, ttl_list, vmin=0, vmax=100, save_path=DEFAULT_OUT , fig_name = f"error_{idx:03d}_inputs")
 
         zv_count            = np.sum(zv_valid)
         rs_count            = np.sum(rs_valid)

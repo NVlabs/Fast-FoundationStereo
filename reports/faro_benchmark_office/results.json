@@ -40,8 +40,8 @@
       "mre_mean": 0.010713689330588565,
       "delta1_mean": 99.3566269030714,
       "coverage_mean": 99.13976084581773,
-      "fps_mean": 6.537700676068054,
-      "time_ms_mean": 152.95897587673383,
+      "fps_mean": 6.591002457733087,
+      "time_ms_mean": 151.72198863720962,
       "close_range_coverage": 8.539325842696629,
       "gpu_load_mean": 0.0,
       "is_ground_truth": false
@@ -54,8 +54,8 @@
       "mre_mean": 0.012076542543226414,
       "delta1_mean": 99.20257452337185,
       "coverage_mean": 99.13975767595193,
-      "fps_mean": 6.88069782103528,
-      "time_ms_mean": 145.3340963387255,
+      "fps_mean": 6.838218937662999,
+      "time_ms_mean": 146.2369089255507,
       "close_range_coverage": 8.539325842696629,
       "gpu_load_mean": 0.0,
       "is_ground_truth": false

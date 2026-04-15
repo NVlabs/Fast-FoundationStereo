@@ -35,11 +35,11 @@ from faro_data_manager import DataSource
 
 FARO_DIR   = r'/mnt/algonas/Local/Data/Stereo/Faro/FARO_DATA_BASE'  # local path to the dataset
 MODEL_PATH = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
-OUT_PATH   = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
-MODEL_PATH = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
+OUT_PATH   = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen_epoch_006.pth'
+#MODEL_PATH = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
 
 BF         = 49470.45   # focal_px * baseline_mm (calibrated from camera)
-EPOCHS     = 5
+EPOCHS     = 15
 LR         = 2e-5
 ITERS      = 8          # GRU iterations (same as inference)
 GAMMA      = 0.9        # sequence loss weight decay
@@ -131,7 +131,7 @@ def main():
 
     best_loss = float('inf')
 
-    for epoch in range(EPOCHS):
+    for epoch in range(7,EPOCHS):
         epoch_loss = 0.0
 
         for left, right, disp_gt, valid, idx in dataloader:
