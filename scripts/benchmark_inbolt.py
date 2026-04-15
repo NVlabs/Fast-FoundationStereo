@@ -46,21 +46,22 @@ from report import ReportGenerator
 
 # ── constants ────────────────────────────────────────────────────────────────
 
-DATA_DIR         = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection'  # local path to the dataset
+#DATA_DIR         = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection' 
+DATA_DIR         = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260415T084601Z-3-001/Data Collection'  # local path to the dataset
 MODEL_PATH      = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
-FINETUNED_PATH  = f'{code_dir}/../weights/20-30-48/model_finetuned_inbolt.pth'
+FINETUNED_PATH  = f'{code_dir}/../weights/20-30-48/model_finetuned_inbolt-20260415.pth'
 DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_benchmark'
 #FARO_DIR       = r'data/faro'  # local path to FARO dataset --- IGNORE ---
 # ORIGINAL_PATH  = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
 # FINETUNED_PATH = f'{code_dir}/../weights/20-30-48/model_finetuned_faro.pth'
 # DEFAULT_OUT    = f'{code_dir}/../reports/faro_benchmark'
 
-BF              = 49470.45   # focal_px * baseline_mm  (calibrated from camera)
+BF              = 50.102706998586 * 385.509887695312 #49470.45   # focal_px * baseline_mm  (calibrated from camera)
 ITERS           = 8          # GRU iterations
 N_VIZ           = 5         # number of frames saved for visual comparison in report
 
 DEPTH_BIN_SIZE_M = 0.1       # width of each distance bin for accuracy/noise plots
-MAX_DEPTH_M      = 6.0       # maximum depth considered in plots
+MAX_DEPTH_M      = 2.0       # maximum depth considered in plots
 
 METHODS = {
     "original":  {"label": "Original model",    "color": "#2980b9"},

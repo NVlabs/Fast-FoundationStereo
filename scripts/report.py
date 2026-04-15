@@ -407,7 +407,7 @@ class ReportGenerator:
             "depth_comparison.png":
                 "Side-by-side depth maps from a single representative frame. Invalid pixels are black.",
             "error_maps.png":
-                "Per-pixel absolute error |pred − GT| clipped at 0.5 m. Brighter = more error.",
+                "Per-pixel absolute error |pred − GT| clipped at 0.1 m. Brighter = more error.",
             "coverage_heatmaps.png":
                 "Fraction of frames each pixel has valid depth, averaged over all benchmark frames.",
             "distance_error_curve.png":

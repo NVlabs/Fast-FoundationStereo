@@ -10,14 +10,16 @@ import numpy as np
 
 # Distance bins used throughout the report
 DIST_BINS: List[Tuple[float, float]] = [
-    (0.0, 1.0),
-    (1.0, 2.0),
-    (2.0, 3.0),
-    (3.0, 5.0),
+    (0.05, 0.25),
+    (0.25, 0.5),
+    (0.5, 0.75),
+    (0.75, 1.0),
+    (1.0, 1.5),
+    (1.5, 2.0),
 ]
-BIN_LABELS = ["0–1 m", "1–2 m", "2–3 m", "3–5 m"]
-BIN_CENTERS = [0.5, 1.5, 2.5, 4.0]
-CLOSE_RANGE_THRESHOLD_M = 0.55
+BIN_LABELS = ["0.05–0.25 m", "0.25–0.5 m", "0.5–0.75 m", "0.75–1 m", "1–1.5 m", "1.5–2 m"]
+BIN_CENTERS = [0.125, 0.375, 0.625, 0.875, 1.25, 1.75]
+CLOSE_RANGE_THRESHOLD_M = 0.05
 
 
 @dataclass
