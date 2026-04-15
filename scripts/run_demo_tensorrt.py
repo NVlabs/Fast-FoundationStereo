@@ -3,7 +3,8 @@ code_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(f'{code_dir}/../')
 from omegaconf import OmegaConf
 from core.utils.utils import InputPadder
-import argparse, torch, imageio, logging, yaml
+import argparse, torch, logging, yaml
+import imageio
 import numpy as np
 from Utils import (
     set_logging_format, set_seed, vis_disparity,
@@ -11,6 +12,21 @@ from Utils import (
 )
 from core.foundation_stereo import TrtRunner
 import cv2
+
+
+def resolve_onnx_cfg_path(onnx_dir: str) -> str:
+  onnx_dir = os.path.normpath(onnx_dir)
+  candidates = [
+    os.path.join(onnx_dir, 'onnx.yaml'),
+    os.path.join(os.path.dirname(onnx_dir), 'onnx.yaml'),
+  ]
+  for p in candidates:
+    if os.path.exists(p):
+      return p
+  raise FileNotFoundError(
+    f"onnx.yaml not found. Looked in: {candidates}. "
+    "Please run scripts/make_onnx.py first to generate ONNX metadata."
+  )
 
 
 if __name__=="__main__":
@@ -32,10 +48,10 @@ if __name__=="__main__":
   set_logging_format()
   set_seed(0)
   torch.autograd.set_grad_enabled(False)
+  os.makedirs(args.out_dir, exist_ok=True)
 
-  os.system(f'rm -rf {args.out_dir} && mkdir -p {args.out_dir}')
-
-  with open(f'{os.path.dirname(args.onnx_dir)}/onnx.yaml', 'r') as ff:
+  onnx_cfg_path = resolve_onnx_cfg_path(args.onnx_dir)
+  with open(onnx_cfg_path, 'r') as ff:
     cfg:dict = yaml.safe_load(ff)
   for k in args.__dict__:
     if args.__dict__[k] is not None:
@@ -96,7 +112,7 @@ if __name__=="__main__":
       lines = f.readlines()
       K = np.array(list(map(float, lines[0].rstrip().split()))).astype(np.float32).reshape(3,3)
       baseline = float(lines[1])
-    K[:2] *= np.array([[fx], [fy]])
+    K[:2] *= np.array([fx, fy], dtype=np.float32)[:, np.newaxis]
     depth = K[0,0]*baseline/disp
     np.save(f'{args.out_dir}/depth_meter.npy', depth)
     xyz_map = depth2xyzmap(depth, K)

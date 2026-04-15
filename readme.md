@@ -103,7 +103,61 @@ Expect to see results like below:
 # ONNX/TRT
 For TRT, we recommend first setup env in docker.
 
+## Single ONNX
+
+Export the full model as a single ONNX file. This replaces the Triton GWC kernel with ONNX-compatible ops so no intermediate engine split is needed.
+
+```bash
+python scripts/make_single_onnx.py --model_dir weights/23-36-37/model_best_bp2_serialize.pth --save_path output/ --height 480 --width 640 --valid_iters 8 --max_disp 192
 ```
+
+| Flag              | Meaning                                                                  |
+|-------------------|--------------------------------------------------------------------------|
+| `--model_dir`     | Path to the trained weights/model file                                   |
+| `--save_path`     | Directory to save the ONNX model and config                              |
+| `--height`        | Input image height, must be divisible by 32. Reduce for faster speed.    |
+| `--width`         | Input image width, must be divisible by 32. Reduce for faster speed.     |
+| `--valid_iters`   | Number of refinement updates during forward pass, reduce for faster speed, but may drop quality |
+| `--max_disp`      | Maximum disparity for volume encoding, 192 should be enough, unless you need to sense very near objects (e.g. <0.1m). Increasing it runs slower and uses more memory. |
+| `--onnx_name`     | Base name for the saved ONNX file (default: `fast_foundationstereo`)     |
+
+Then convert to a single TRT engine:
+```bash
+trtexec --onnx=output/fast_foundationstereo.onnx --saveEngine=output/fast_foundationstereo.engine --fp16
+```
+
+To run inference with the single ONNX or TRT engine:
+```bash
+python scripts/run_demo_single_trt.py --model_dir output/ --left_file demo_data/left.png --right_file demo_data/right.png --intrinsic_file demo_data/K.txt --out_dir output_demo/ --get_pc 1 --remove_invisible 0 --denoise_cloud 1 --zfar 100
+```
+
+The script auto-detects `.engine` or `.onnx` files in `--model_dir`. To use a specific file, pass `--model_file` directly.
+
+| Flag                  | Meaning                                                                  |
+|-----------------------|--------------------------------------------------------------------------|
+| `--model_dir`         | Directory containing the .onnx/.engine file and its .yaml config         |
+| `--model_file`        | Explicit path to .onnx or .engine file (overrides auto-search)           |
+| `--left_file`         | Path to the left image file                                              |
+| `--right_file`        | Path to the right image file                                             |
+| `--intrinsic_file`    | Path to the camera intrinsic matrix and baseline file                    |
+| `--out_dir`           | Output directory for saving results                                      |
+| `--remove_invisible`  | Whether to ignore non-overlapping region's depth (0: no, 1: yes)         |
+| `--denoise_cloud`     | Whether to apply denoising to the point cloud (0: no, 1: yes)            |
+| `--get_pc`            | Obtain point cloud output (0: no, 1: yes)                                |
+| `--zfar`              | Maximum depth (m) to include in point cloud                              |
+
+**Note:** The single ONNX model expects **pre-normalized** float32 inputs (ImageNet normalization stripped). The inference script handles this automatically. If integrating into your own pipeline, apply normalization beforehand:
+```
+normalized = (pixel - mean) / std
+mean = [123.675, 116.28, 103.53]
+std  = [ 58.395, 57.12, 57.375]
+```
+
+## Two-stage ONNX
+
+The original export splits the model into two ONNX files around the Triton GWC kernel, which runs as an intermediate step between the two TRT engines.
+
+```bash
 python scripts/make_onnx.py --model_dir weights/23-36-37/model_best_bp2_serialize.pth --save_path output/ --height 448 --width 640 --valid_iters 8 --max_disp 192
 ```
 
@@ -116,16 +170,16 @@ python scripts/make_onnx.py --model_dir weights/23-36-37/model_best_bp2_serializ
 | `--valid_iters`   | Number of updates during forward pass, reduce it for faster speed, but may drop quality                                    |
 | `--max_disp`      | Maximum disparity for volume encoding, 192 should be enough, unless you need to sense very near objects (e.g. <0.1m). Increasing it runs slower and uses more memory.                                    |
 
-Refer to `scripts/make_onnx.py` for a comprehensive list of available flags.  Since some intermediate operation is not supported by TRT conversion. We split around it into 2 onnx files.
+Refer to `scripts/make_onnx.py` for a comprehensive list of available flags.
 
-Then convert from ONNX to TRT as below.
-```
+Then convert from ONNX to TRT:
+```bash
 trtexec --onnx=output/feature_runner.onnx --saveEngine=output/feature_runner.engine --fp16  --useCudaGraph
 trtexec --onnx=output/post_runner.onnx --saveEngine=output/post_runner.engine --fp16  --useCudaGraph
 ```
 
-To use TRT for inference:
-```
+To use the two-stage TRT for inference:
+```bash
 python scripts/run_demo_tensorrt.py --onnx_dir output/ --left_file demo_data/left.png --right_file demo_data/right.png --intrinsic_file demo_data/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --get_pc 1 --zfar 100
 ```
 
