@@ -27,7 +27,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import cv2
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 from core.utils.utils import InputPadder
 import Utils as U
 from inbolt_data_manager import DataSource
@@ -37,8 +37,11 @@ from inbolt_data_manager import DataSource
 
 INBOLT_DIR   = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection'  # local path to the dataset
 INBOLT_DIR   = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260415T084601Z-3-001/Data Collection' 
-MODEL_PATH = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
-OUT_PATH   = f'{code_dir}/../weights/20-30-48/model_finetuned_inbolt-20260415.pth'
+# MODEL_PATH = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
+# OUT_PATH   = f'{code_dir}/../weights/20-30-48/model_finetuned_inbolt-20260415.pth'
+MODEL_PATH = f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth'
+OUT_PATH   = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt-20260415.pth'
+
 
 # BF         = 49.8624*385.73  # D435 - focal_px * baseline_mm (calibrated from camera)  # D435 - focal_px * baseline_mm (calibrated from camera)
 BF         = 50.102706998586 * 385.509887695312 # new data
@@ -46,6 +49,8 @@ EPOCHS     = 30
 LR         = 2e-5
 ITERS      = 8          # GRU iterations (same as inference)
 GAMMA      = 0.9        # sequence loss weight decay
+TRAIN_RATIO = 0.75
+SPLIT_SEED  = 0
 
 
 # ── dataset ──────────────────────────────────────────────────────────────────
@@ -106,6 +111,35 @@ def sequence_loss(disp_preds, disp_gt, valid, gamma=GAMMA):
     return loss
 
 
+def evaluate_split_loss(model, dataloader):
+    """Evaluate average sequence loss over a dataloader (no gradient updates)."""
+    if len(dataloader) == 0:
+        return float('nan')
+
+    model.eval()
+    total_loss = 0.0
+
+    with torch.no_grad():
+        for left, right, disp_gt, valid in dataloader:
+            left, right = left.cuda(), right.cuda()
+            disp_gt, valid = disp_gt.cuda(), valid.cuda()
+
+            padder = InputPadder(left.shape, divis_by=32, force_square=False)
+            left_p, right_p = padder.pad(left, right)
+
+            with torch.amp.autocast('cuda', enabled=True, dtype=U.AMP_DTYPE):
+                _init_disp, disp_preds = model.forward(
+                    left_p, right_p, iters=ITERS, test_mode=False
+                )
+                disp_preds = [padder.unpad(p) for p in disp_preds]
+                loss = sequence_loss(disp_preds, disp_gt, valid)
+
+            total_loss += loss.item()
+
+    model.train()
+    return total_loss / len(dataloader)
+
+
 # ── main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -133,15 +167,33 @@ def main():
     )
     scaler = torch.amp.GradScaler('cuda')
 
-    dataset    = InboltDataset(INBOLT_DIR)
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=0)
+    dataset = InboltDataset(INBOLT_DIR)
+    n_total = len(dataset)
+
+    if n_total < 2:
+        raise RuntimeError(f"Need at least 2 samples for a 75/25 train/test split, got {n_total}.")
+
+    n_train = int(round(TRAIN_RATIO * n_total))
+    n_train = min(max(1, n_train), n_total - 1)
+    n_test = n_total - n_train
+
+    split_generator = torch.Generator().manual_seed(SPLIT_SEED)
+    train_set, test_set = random_split(dataset, [n_train, n_test], generator=split_generator)
+
+    train_loader = DataLoader(train_set, batch_size=1, shuffle=True, num_workers=0)
+    test_loader = DataLoader(test_set, batch_size=1, shuffle=False, num_workers=0)
+
+    logging.info(
+        f"Random split with seed={SPLIT_SEED}: total={n_total}, train={len(train_set)} ({100.0*len(train_set)/n_total:.1f}%), "
+        f"test={len(test_set)} ({100.0*len(test_set)/n_total:.1f}%)"
+    )
 
     best_loss = float('inf')
 
     for epoch in range(EPOCHS):
         epoch_loss = 0.0
 
-        for left, right, disp_gt, valid in dataloader:
+        for left, right, disp_gt, valid in train_loader:
             left, right = left.cuda(), right.cuda()
             disp_gt, valid = disp_gt.cuda(), valid.cuda()
 
@@ -149,7 +201,7 @@ def main():
             padder = InputPadder(left.shape, divis_by=32, force_square=False)
             left_p, right_p = padder.pad(left, right)
 
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
 
             with torch.amp.autocast('cuda', enabled=True, dtype=U.AMP_DTYPE):
                 _init_disp, disp_preds = model.forward(
@@ -166,15 +218,25 @@ def main():
 
             epoch_loss += loss.item()
 
-        avg = epoch_loss / len(dataloader)
-        logging.info(f"Epoch {epoch+1:3d}/{EPOCHS}  loss={avg:.4f}")
+        train_loss = epoch_loss / len(train_loader)
+        train_eval_error = evaluate_split_loss(model, train_loader)
+        test_eval_error = evaluate_split_loss(model, test_loader)
 
-        if avg < best_loss:
-            best_loss = avg
+        logging.info(
+            f"Epoch {epoch+1:3d}/{EPOCHS}  train_loss={train_loss:.4f}  "
+            f"train_eval_error={train_eval_error:.4f}  test_eval_error={test_eval_error:.4f}"
+        )
+
+        if test_eval_error < best_loss:
+            best_loss = test_eval_error
             torch.save(model, OUT_PATH.replace('.pth', f'_epoch_{epoch+1:03d}.pth'))
-            logging.info(f"  → saved best model (loss={best_loss:.4f})")
+            logging.info(f"  → saved best model (test_eval_error={best_loss:.4f})")
 
-    logging.info(f"Training complete. Best loss: {best_loss:.4f}")
+    final_train_error = evaluate_split_loss(model, train_loader)
+    final_test_error = evaluate_split_loss(model, test_loader)
+    logging.info(f"Final train error: {final_train_error:.4f}")
+    logging.info(f"Final test error:  {final_test_error:.4f}")
+    logging.info(f"Training complete. Best test error: {best_loss:.4f}")
     logging.info(f"Model saved to {OUT_PATH}")
 
 
