@@ -1019,5 +1019,5 @@ class RealSense(object):
 if __name__ == '__main__':
     cap = RealSense(frame_size=(1280,720))
     #cap = RealSense(frame_size=(640,360))
-    cap.test()
-    #cap.test_intrinsics()
+    #cap.test()
+    cap.test_intrinsics()
