@@ -94,8 +94,9 @@ class DataSource:
         self.gray_scale_input = gray_scale_input
         self.imgs = []
 
-        IGNORED_SESSIONS = {'dataset_y16_freedrive', 'dataset_y8_freedrive'}
+        #IGNORED_SESSIONS = {'dataset_y16_freedrive', 'dataset_y8_freedrive'}
         #IGNORED_SESSIONS = {'dataset_y16_freedrive','dataset_depth_bias'}
+        IGNORED_SESSIONS = {'20260414_142239'}  # include all sessions by default; manually exclude any bad ones here
 
         # Each immediate sub-directory is a session
         try:

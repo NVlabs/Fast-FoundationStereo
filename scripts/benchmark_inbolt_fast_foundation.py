@@ -48,8 +48,10 @@ from report import ReportGenerator
 # ── constants ────────────────────────────────────────────────────────────────
 #DATA_DIR         = r'C:\Work\Data\Depth\Data Collection'  # local path to the dataset
 DATA_DIR        = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection'  # local path to the dataset
+DATA_DIR         = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260415T084601Z-3-001/Data Collection'  # local path to the dataset
+
 MODEL_PATH      = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
-FINETUNED_PATH  = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
+FINETUNED_PATH  = f'{code_dir}/../weights/20-30-48/model_finetuned_inbolt-20260415_epoch_030.pth'
 DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark'
 #FARO_DIR       = r'data/faro'  # local path to FARO dataset --- IGNORE ---
 # ORIGINAL_PATH  = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
@@ -72,8 +74,8 @@ METHODS = {
 GT_NAME = "inbolt_gt"
 
 CAMERA_MATRIX_RS = np.array([
-    [385.7338562011719, 0, 320.17578125],
-    [0, 385.7338562011719, 245.1015167236328],
+    [385.5098876953125, 0, 328.31732177734375],
+    [0, 385.5098876953125, 235.6382141113281],
     [0, 0, 1]
 ])
 
@@ -86,10 +88,11 @@ DIST_COEFFS_RS = np.array([
 ])
 
 CAMERA_MATRIX_ZIVID = np.array([
-    [1240.27099609375, 0, 604.5339927697801],
-    [0, 1240.2381591796875, 505.60805553154046],
+    [1241.8536376953125, 0, 609.9681922158361],
+    [0, 1241.6390380859375, 513.828698754003],
     [0, 0, 1]
 ])
+
 DIST_COEFFS_ZIVID = np.array([
     0.045981280505657196,
     -0.0316404290497303,
@@ -960,7 +963,7 @@ def main_inbolt_ffs_graphs_with_projection_biased_dataset():
         if idx == 1:
             XYZ_FS = project_camera_to_3d(ffs_mm, CAMERA_MATRIX_RS, DIST_COEFFS_RS)
             # save to ply point cloud for visualization
-            save_to_ply(XYZ_FS/1000, f'ffs_projected_points_{idx:03d}.ply') # save in meters for visualization
+            #save_to_ply(XYZ_FS/1000, f'ffs_projected_points_{idx:03d}.ply') # save in meters for visualization
         
 
         zv_valid           = (10 < zv_prj_mm) 
