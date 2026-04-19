@@ -77,6 +77,46 @@ class DataSource:
 
         log.info(f"DataSource: found {len(self.imgs)} samples in {input_rectified}")
         return len(self.imgs)
+    
+
+    def save_to_ply(self, points: np.ndarray, filename: str):
+        """Save a point cloud to a PLY file for visualization."""
+        with open(filename, 'w') as f:
+            f.write('ply\n')
+            f.write('format ascii 1.0\n')
+            f.write(f'element vertex {len(points)}\n')
+            f.write('property float x\n')
+            f.write('property float y\n')
+            f.write('property float z\n')
+            f.write('end_header\n')
+            for x, y, z in points:
+                f.write(f'{x} {y} {z}\n')
+        log.info(f"Saved point cloud to {filename}")    
+    
+    def project_camera_to_3d(self, depth_img_mm: np.ndarray, cam_matrix: np.ndarray, dist_coeffs: np.ndarray) -> np.ndarray:
+        """Project 2D pixel coordinates with depth to 3D points in camera space."""
+        h, w = depth_img_mm.shape
+        xs, ys = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32), indexing='xy')
+
+        # OpenCV expects Nx1x2 contiguous float32/float64 image points in (x, y) order.
+        distorted_points = np.stack([xs, ys], axis=-1).reshape(-1, 1, 2).astype(np.float32)
+        undistorted_points = cv2.undistortPoints(distorted_points,  cam_matrix.astype(np.float32),  dist_coeffs.astype(np.float32) )
+
+        uv = undistorted_points.reshape(-1, 2)
+        Z = depth_img_mm.reshape(-1).astype(np.float32)
+        valid = np.isfinite(Z) & (Z > 0)
+        if not np.any(valid):
+            return np.zeros((0, 3), dtype=np.float32)
+
+        uv      = uv[valid]
+        Z       = Z[valid]
+        X       = uv[:, 0] * Z
+        Y       = uv[:, 1] * Z
+
+        # save to ply point cloud for visualization
+        XYZ     = np.stack([X, Y, Z], axis=1).astype(np.float32)
+
+        return XYZ    
 
     def get_item(self, index: int, debug: bool = False):
         """Return one sample from packed d16 file as left/right/depth maps."""

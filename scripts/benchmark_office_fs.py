@@ -160,7 +160,7 @@ class ReportGeneratorInbolt(ReportGenerator):
 # ── constants ────────────────────────────────────────────────────────────────
 
 #DATA_DIR            = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260415T084601Z-3-001/Data Collection'
-DATA_DIR            = r'C:\Work\Data\DepthRS\data\pattern_cube'
+DATA_DIR            = f'{code_dir}/../data/pattern_cube'
 #ORIGINAL_PATH  = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
 # FINETUNED_PATH  = f'{code_dir}/../weights/20-30-48/model_finetuned_inbolt-20260415_epoch_030.pth'
 ORIGINAL_PATH       = f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth'
