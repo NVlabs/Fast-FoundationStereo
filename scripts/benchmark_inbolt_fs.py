@@ -18,6 +18,7 @@ import logging
 import os
 import sys
 import time
+import cv2
 from pathlib import Path
 from typing import Dict, Optional
 
