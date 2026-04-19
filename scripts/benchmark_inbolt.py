@@ -50,6 +50,8 @@ from report import ReportGenerator
 DATA_DIR         = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260415T084601Z-3-001/Data Collection'  # local path to the dataset
 MODEL_PATH      = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
 FINETUNED_PATH  = f'{code_dir}/../weights/20-30-48/model_finetuned_inbolt-20260415.pth'
+MODEL_PATH      = f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth'
+FINETUNED_PATH  = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt-20260415.pth'
 DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_benchmark'
 #FARO_DIR       = r'data/faro'  # local path to FARO dataset --- IGNORE ---
 # ORIGINAL_PATH  = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'

@@ -159,11 +159,12 @@ class ReportGeneratorInbolt(ReportGenerator):
 
 # ── constants ────────────────────────────────────────────────────────────────
 
-DATA_DIR = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260415T084601Z-3-001/Data Collection'
-ORIGINAL_PATH = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
-# Preferred explicit path; if missing, we auto-resolve from known candidates / patterns.
-FINETUNED_PATH = f'{code_dir}/../weights/20-30-48/model_finetuned_inbolt-20260415_epoch_030.pth'
-DEFAULT_OUT = f'{code_dir}/../reports/inbolt_ffs_benchmark-20260415'
+DATA_DIR       = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260415T084601Z-3-001/Data Collection'
+ORIGINAL_PATH  = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
+# FINETUNED_PATH  = f'{code_dir}/../weights/20-30-48/model_finetuned_inbolt-20260415_epoch_030.pth'
+# MODEL_PATH      = f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth'
+FINETUNED_PATH  = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt-20260415_epoch_030.pth'
+DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark-model37-20260415'
 N_VIZ = 5
 
 METHODS: Dict[str, Dict[str, str]] = {
