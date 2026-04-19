@@ -45,7 +45,7 @@ OUT_PATH   = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt-20260415.pt
 
 # BF         = 49.8624*385.73  # D435 - focal_px * baseline_mm (calibrated from camera)  # D435 - focal_px * baseline_mm (calibrated from camera)
 BF         = 50.102706998586 * 385.509887695312 # new data
-EPOCHS     = 30
+EPOCHS     = 120
 LR         = 2e-5
 ITERS      = 8          # GRU iterations (same as inference)
 GAMMA      = 0.9        # sequence loss weight decay
