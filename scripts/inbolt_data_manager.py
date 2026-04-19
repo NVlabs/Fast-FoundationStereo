@@ -39,6 +39,9 @@ import unittest
 import logging as log
 import yaml
 
+# format logger
+log.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=log.INFO)
+
 # --------------------------------
 
 CAMERA_MATRIX_RS = np.array([
@@ -67,6 +70,8 @@ DIST_COEFFS_ZIVID = np.array([
     - 0.00015102965699043125,
     - -0.17297066748142242
 ])
+
+
 
 
 # --------------------------------
@@ -246,10 +251,20 @@ class DataSource:
         if debug:
             img_list = [left_img, right_img, depth_rs, depth_zivid_projected]
             ttl_list = ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth Zivid (mm)']
-            if rgb_img.size > 0:
-                img_list.append(rgb_img)
-                ttl_list.append('rgb (Zivid)')
+            # if rgb_img.size > 0:
+            #     img_list.append(rgb_img)
+            #     ttl_list.append('rgb (Zivid)')
             self.show_subset(img_list, ttl_list)
+
+            # create point cloud  & save to ply point cloud for visualization
+            #XYZ = self.project_camera_to_3d(depth_zivid_projected, CAMERA_MATRIX_ZIVID, DIST_COEFFS_ZIVID)
+            XYZ = self.project_camera_to_3d(depth_zivid_projected, CAMERA_MATRIX_RS, DIST_COEFFS_RS)  # (N, 3) array of 3D points in Zivid camera space
+            zivid_path = entry['depth_zivid'].replace('.png', f'.ply')
+            self.save_to_ply(XYZ/1000, zivid_path) # save in meters for visualization
+
+            XYZ = self.project_camera_to_3d(depth_rs, CAMERA_MATRIX_RS, DIST_COEFFS_RS)  # (N, 3) array of 3D points in RS camera space
+            rs_path = entry['depth_rs'].replace('.png', f'.ply')
+            self.save_to_ply(XYZ/1000, rs_path) 
 
         return output_str    
 
@@ -316,6 +331,7 @@ class DataSource:
             f.write('end_header\n')
             for x, y, z in points:
                 f.write(f'{x} {y} {z}\n')
+        log.info(f"Saved point cloud to {filename}")
 
     def project_camera_to_3d(self, depth_img_mm: np.ndarray, cam_matrix: np.ndarray, dist_coeffs: np.ndarray) -> np.ndarray:
         """Project 2D pixel coordinates with depth to 3D points in camera space."""
@@ -380,14 +396,14 @@ class DataSource:
         # create 3D point cloud from zivid depth
         XYZ = self.project_camera_to_3d(depth_zivid_mm, CAMERA_MATRIX_ZIVID, DIST_COEFFS_ZIVID)  # (N, 3) array of 3D points in Zivid camera space
         # save to ply point cloud for visualization
-        #save_to_ply(XYZ/1000, f'zivid_original_points_{finx:03d}.ply') # save in meters for visualization
+        self.save_to_ply(XYZ/1000, f'zivid_original_points_{finx:03d}.ply') # save in meters for visualization
 
         # project back on imaage RS
         depth_zivid_projected_mm = self.project_3d_to_camera(XYZ, CAMERA_MATRIX_RS, DIST_COEFFS_RS, frame_size = depth_rs_mm.shape)  # (H, W) depth map of Zivid points projected into RealSense pixel space
 
         XYZ_RS = self.project_camera_to_3d(depth_zivid_projected_mm, CAMERA_MATRIX_RS, DIST_COEFFS_RS)
-            # save to ply point cloud for visualization
-        #save_to_ply(XYZ_RS/1000, f'zivid_projected_points_{finx:03d}.ply') # save in meters for visualization
+        # save to ply point cloud for visualization
+        #self.save_to_ply(XYZ_RS/1000, f'zivid_projected_points_{finx:03d}.ply') # save in meters for visualization
 
         return depth_zivid_projected_mm    
     
@@ -436,7 +452,7 @@ class TestDataSource(unittest.TestCase):
         img_num = p.init_directory(r'C:\Work\Data\Depth\Data Collection-02')
         self.assertTrue(img_num > 0)
         for k in np.random.randint(0, img_num, size=min(6, img_num)):
-            out = p.get_item_projected(int(k), debug=False)
+            out = p.get_item_projected(int(k), debug=True)
             err = p.compute_depth_error(out["depth_rs"], out["depth_zivid"])
             self.assertTrue(len(out["left"]) > 0)
             p.show_subset([out["left"], out["right"], out["depth_zivid"], out["depth_rs"], err],
