@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 
 import Utils as U
 from benchmark_inbolt import DepthBinAccumulator, infer_depth_m, load_model, plot_depth_vs_distance
-from inbolt_data_manager import DataSource, CAMERA_MATRIX_RS, DIST_COEFFS_RS
+from scripts.data_manager_inbolt import DataSource, CAMERA_MATRIX_RS, DIST_COEFFS_RS
 from metrics import (
     BenchmarkResults,
     FrameMetrics,
@@ -164,8 +164,8 @@ DATA_DIR       = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_data
 ORIGINAL_PATH  = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
 # FINETUNED_PATH  = f'{code_dir}/../weights/20-30-48/model_finetuned_inbolt-20260415_epoch_030.pth'
 # MODEL_PATH      = f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth'
-FINETUNED_PATH  = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt-20260415_epoch_030.pth'
-DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark-model37-20260415'
+FINETUNED_PATH  = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt-20260415_epoch_111.pth'
+DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark-model37-111-set-20260414_142239'
 N_VIZ = 5
 
 METHODS: Dict[str, Dict[str, str]] = {
@@ -289,12 +289,13 @@ def main():
         n_close = int(gt_close_mask.sum())
 
         # create point clouds for visualization
-        for mname in active_methods:
-            pred = frame_depths[mname]
+        if idx % 10 == 0:
+            for mname in active_methods:
+                pred = frame_depths[mname]
 
-            XYZ = source.project_camera_to_3d(pred, CAMERA_MATRIX_RS, DIST_COEFFS_RS)  # (N, 3) array of 3D points in Zivid camera space
-            mname_path = os.path.join(out_dir, f'{mname}_{idx:03d}.ply')
-            source.save_to_ply(XYZ/1000, mname_path) # save in meters for visualization
+                XYZ = source.project_camera_to_3d(pred, CAMERA_MATRIX_RS, DIST_COEFFS_RS)  # (N, 3) array of 3D points in Zivid camera space
+                mname_path = os.path.join(out_dir, f'{mname}_{idx:03d}.ply')
+                source.save_to_ply(XYZ/1000, mname_path) # save in meters for visualization
 
 
         for mname in active_methods:

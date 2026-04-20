@@ -30,7 +30,7 @@ import cv2
 from torch.utils.data import Dataset, DataLoader, random_split
 from core.utils.utils import InputPadder
 import Utils as U
-from inbolt_data_manager import DataSource
+from scripts.data_manager_inbolt import DataSource
 
 
 # ── constants ────────────────────────────────────────────────────────────────

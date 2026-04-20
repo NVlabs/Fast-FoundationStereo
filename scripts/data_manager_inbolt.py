@@ -104,7 +104,7 @@ class DataSource:
                 os.path.join(input_rectified, d)
                 for d in os.listdir(input_rectified)
                 if os.path.isdir(os.path.join(input_rectified, d))
-                and d not in IGNORED_SESSIONS
+                and d in IGNORED_SESSIONS
             ])
         except FileNotFoundError:
             log.error(f"Directory not found: {input_rectified}")

@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 from core.utils.utils import InputPadder
 import Utils as U
 
-from inbolt_data_manager import DataSource
+from scripts.data_manager_inbolt import DataSource
 
 from metrics import (
     BenchmarkResults,
