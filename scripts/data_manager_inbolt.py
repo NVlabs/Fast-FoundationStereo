@@ -452,8 +452,9 @@ class TestDataSource(unittest.TestCase):
         p       = DataSource()
         img_num = p.init_directory(r'C:\Work\Data\Depth\Data Collection-02')
         self.assertTrue(img_num > 0)
-        for k in np.random.randint(0, img_num, size=min(6, img_num)):
-            out = p.get_item_projected(int(k), debug=True)
+        #for k in np.random.randint(0, img_num, size=min(12, img_num)):
+        for k in range(0, img_num):
+            out = p.get_item_projected(int(k), debug=False)
             err = p.compute_depth_error(out["depth_rs"], out["depth_zivid"])
             self.assertTrue(len(out["left"]) > 0)
             p.show_subset([out["left"], out["right"], out["depth_zivid"], out["depth_rs"], err],
