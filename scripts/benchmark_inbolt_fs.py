@@ -283,19 +283,21 @@ def main():
         for mname, model in models.items():
             t0 = time.monotonic()
             frame_depths[mname] = infer_depth_m(model, left, right)
+            # save raw data to p.g images 16 bit PNGs for later analysis if needed
+            #cv2.imwrite(str(out_dir / f'{mname}_{idx:03d}.png'), (frame_depths[mname] * 1000.0).astype(np.uint16))
             timing_ms_raw[mname].append((time.monotonic() - t0) * 1000.0)
 
         gt_close_mask = (gt_m > 0) & (gt_m < CLOSE_RANGE_THRESHOLD_M)
         n_close = int(gt_close_mask.sum())
 
-        # create point clouds for visualization
-        if idx % 10 == 0:
-            for mname in active_methods:
-                pred = frame_depths[mname]
+        # # create point clouds for visualization
+        # if idx % 10 == 0:
+        #     for mname in active_methods:
+        #         pred = frame_depths[mname]
 
-                XYZ = source.project_camera_to_3d(pred, CAMERA_MATRIX_RS, DIST_COEFFS_RS)  # (N, 3) array of 3D points in Zivid camera space
-                mname_path = os.path.join(out_dir, f'{mname}_{idx:03d}.ply')
-                source.save_to_ply(XYZ/1000, mname_path) # save in meters for visualization
+        #         XYZ = source.project_camera_to_3d(pred, CAMERA_MATRIX_RS, DIST_COEFFS_RS)  # (N, 3) array of 3D points in Zivid camera space
+        #         mname_path = os.path.join(out_dir, f'{mname}_{idx:03d}.ply')
+        #         source.save_to_ply(XYZ/1000, mname_path) # save in meters for visualization
 
 
         for mname in active_methods:
