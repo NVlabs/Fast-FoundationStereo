@@ -64,7 +64,7 @@ if __name__ == '__main__':
         input_names = ['left', 'right'],
         output_names = ['features_left_04', 'features_left_08', 'features_left_16', 'features_left_32', 'features_right_04', 'stem_2x'],
         do_constant_folding=True,
-        dynamo=False,
+        dynamo=True,
     )
 
     features_left_04, features_left_08, features_left_16, features_left_32, features_right_04, stem_2x = feature_runner(left_img, right_img)
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         input_names = ['features_left_04', 'features_left_08', 'features_left_16', 'features_left_32', 'features_right_04', 'stem_2x', 'gwc_volume'],
         output_names = ['disp'],
         do_constant_folding=True,
-        dynamo=False,
+        dynamo=True,
     )
 
     with open(f'{args.save_path}/onnx.yaml', 'w') as f:

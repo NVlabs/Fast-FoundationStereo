@@ -13,11 +13,10 @@ def build_engine(onnx_path: str, engine_path: str, fp16: bool = True, workspace_
     config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, workspace_gb << 30)
 
     parser = trt.OnnxParser(network, TRT_LOGGER)
-    with open(onnx_path, "rb") as f:
-        if not parser.parse(f.read()):
-            for i in range(parser.num_errors):
-                print(f"ONNX parse error {i}: {parser.get_error(i)}")
-            raise RuntimeError(f"Failed to parse ONNX: {onnx_path}")
+    if not parser.parse_from_file(onnx_path):
+        for i in range(parser.num_errors):
+            print(f"ONNX parse error {i}: {parser.get_error(i)}")
+        raise RuntimeError(f"Failed to parse ONNX: {onnx_path}")
 
     if fp16 and builder.platform_has_fast_fp16:
         config.set_flag(trt.BuilderFlag.FP16)

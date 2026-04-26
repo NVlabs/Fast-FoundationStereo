@@ -116,7 +116,7 @@ def rebuild_trt_engines(model_path: str, trt_dir: str, height: int, width: int) 
             output_names=['features_left_04', 'features_left_08', 'features_left_16',
                           'features_left_32', 'features_right_04', 'stem_2x'],
             do_constant_folding=True,
-            dynamo=False,
+            dynamo=True,
         )
 
     # ── post runner → ONNX ───────────────────────────────────────────────────
@@ -142,7 +142,7 @@ def rebuild_trt_engines(model_path: str, trt_dir: str, height: int, width: int) 
                          'features_left_32', 'features_right_04', 'stem_2x', 'gwc_volume'],
             output_names=['disp'],
             do_constant_folding=True,
-            dynamo=False,
+            dynamo=True,
         )
 
     # ── save model config ─────────────────────────────────────────────────────
