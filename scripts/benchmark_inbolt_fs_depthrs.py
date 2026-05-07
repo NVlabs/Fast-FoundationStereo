@@ -77,9 +77,9 @@ from report import ReportGenerator
 DATA_DIR       = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260415T084601Z-3-001/Data Collection'
 ORIGINAL_PATH  = f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth'
 FINETUNED_PATH = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt-20260415_epoch_111.pth'
-DEPTHRS_PATH   = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt_depthrs.pth'
-DEPTHRS_V2_PATH = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt_depthrs_v2.pth'
-DEFAULT_OUT    = f'{code_dir}/../reports/inbolt_ffs_depthrs_benchmark_v2'
+DEPTHRS_PATH   = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt_depthrs_epoch_001.pth'
+DEPTHRS_V2_PATH = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt_depthrs_v2_epoch_014.pth'
+DEFAULT_OUT    = f'{code_dir}/../reports/inbolt_ffs_depthrs_benchmark_v2_epoch_014_depth_0'
 N_VIZ          = 5
 
 METHODS: Dict[str, Dict[str, str]] = {
@@ -150,6 +150,8 @@ def infer_depth_m_depthrs(
     depth_rs_mm: (H, W) float32, RealSense depth in millimetres.
     """
     left_t, right_t = _preprocess_ir(left, right)
+    # debug - make depth zero
+    depth_rs_mm = depth_rs_mm*0
     depth_rs_t = torch.as_tensor(depth_rs_mm.astype(np.float32))[None, None].cuda()  # (1,1,H,W)
 
     padder = InputPadder(left_t.shape, divis_by=32, force_square=False)
