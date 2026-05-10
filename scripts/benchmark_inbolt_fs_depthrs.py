@@ -78,15 +78,15 @@ DATA_DIR       = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_data
 ORIGINAL_PATH  = f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth'
 FINETUNED_PATH = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt-20260415_epoch_111.pth'
 DEPTHRS_PATH   = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt_depthrs_epoch_001.pth'
-DEPTHRS_V2_PATH = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt_depthrs_v2_epoch_014.pth'
-DEFAULT_OUT    = f'{code_dir}/../reports/inbolt_ffs_depthrs_benchmark_v2_epoch_014_depth_0'
+#DEPTHRS_V2_PATH = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt_depthrs_v2_epoch_014.pth'
+DEFAULT_OUT    = f'{code_dir}/../reports/inbolt_ffs_depthrs_benchmark'
 N_VIZ          = 5
 
 METHODS: Dict[str, Dict[str, str]] = {
     'original':          {'label': 'FFS Original',                         'color': '#2980b9'},
     'finetuned':         {'label': 'FFS Fine-tuned (Inbolt)',              'color': '#e74c3c'},
     'depthrs_finetuned': {'label': 'FFS + RS Depth Fusion v1 (Inbolt)',   'color': '#8e44ad'},
-    'depthrs_v2':        {'label': 'FFS + RS Output Blend v2 (Inbolt)',   'color': '#1abc9c'},
+    #'depthrs_v2':        {'label': 'FFS + RS Output Blend v2 (Inbolt)',   'color': '#1abc9c'},
     'depth_rs':          {'label': 'RealSense Hardware Depth',             'color': '#f39c12'},
     'zivid_gt':          {'label': 'Zivid GT (projected to RS)',           'color': '#27ae60'},
 }
@@ -186,7 +186,7 @@ def main():
     parser.add_argument('--original',  default=ORIGINAL_PATH,  help='Original FFS weights')
     parser.add_argument('--finetuned', default=FINETUNED_PATH, help='Stereo-only fine-tuned weights')
     parser.add_argument('--depthrs',    default=DEPTHRS_PATH,    help='Depth-fusion v1 weights')
-    parser.add_argument('--depthrs_v2', default=DEPTHRS_V2_PATH, help='Depth-fusion v2 weights')
+    #parser.add_argument('--depthrs_v2', default=DEPTHRS_V2_PATH, help='Depth-fusion v2 weights')
     parser.add_argument('--n_viz', type=int, default=N_VIZ,     help='Frames saved for visual comparison')
     args = parser.parse_args()
 
@@ -212,11 +212,11 @@ def main():
     else:
         logging.warning(f'Depth-fusion v1 model not found at {args.depthrs} — skipping')
 
-    depthrs_v2_path = resolve_depthrs_v2_model_path(args.depthrs_v2)
-    if depthrs_v2_path is not None:
-        depthrs_models['depthrs_v2'] = load_depthrs_model(depthrs_v2_path)
-    else:
-        logging.warning(f'Depth-fusion v2 model not found at {args.depthrs_v2} — skipping')
+    # depthrs_v2_path = resolve_depthrs_v2_model_path(args.depthrs_v2)
+    # if depthrs_v2_path is not None:
+    #     depthrs_models['depthrs_v2'] = load_depthrs_model(depthrs_v2_path)
+    # else:
+    #     logging.warning(f'Depth-fusion v2 model not found at {args.depthrs_v2} — skipping')
 
     all_model_names = list(models.keys()) + list(depthrs_models.keys())
     active_methods  = [GT_NAME, RS_NAME] + all_model_names
@@ -332,8 +332,8 @@ def main():
         method_configs['finetuned'] = {'model_path': finetuned_path}
     if 'depthrs_finetuned' in depthrs_models and depthrs_path:
         method_configs['depthrs_finetuned'] = {'model_path': depthrs_path}
-    if 'depthrs_v2' in depthrs_models and depthrs_v2_path:
-        method_configs['depthrs_v2'] = {'model_path': depthrs_v2_path}
+    # if 'depthrs_v2' in depthrs_models and depthrs_v2_path:
+    #     method_configs['depthrs_v2'] = {'model_path': depthrs_v2_path}
 
     results = BenchmarkResults(
         method_names=active_methods,
