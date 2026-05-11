@@ -104,7 +104,7 @@ class DataSource:
                 os.path.join(input_rectified, d)
                 for d in os.listdir(input_rectified)
                 if os.path.isdir(os.path.join(input_rectified, d))
-                and d in IGNORED_SESSIONS
+                and d not in IGNORED_SESSIONS
             ])
         except FileNotFoundError:
             log.error(f"Directory not found: {input_rectified}")
@@ -261,11 +261,11 @@ class DataSource:
             #XYZ = self.project_camera_to_3d(depth_zivid_projected, CAMERA_MATRIX_ZIVID, DIST_COEFFS_ZIVID)
             XYZ = self.project_camera_to_3d(depth_zivid_projected, CAMERA_MATRIX_RS, DIST_COEFFS_RS)  # (N, 3) array of 3D points in Zivid camera space
             zivid_path = entry['depth_zivid'].replace('.png', f'.ply')
-            self.save_to_ply(XYZ/1000, zivid_path) # save in meters for visualization
+            #self.save_to_ply(XYZ/1000, zivid_path) # save in meters for visualization
 
             XYZ = self.project_camera_to_3d(depth_rs, CAMERA_MATRIX_RS, DIST_COEFFS_RS)  # (N, 3) array of 3D points in RS camera space
             rs_path = entry['depth_rs'].replace('.png', f'.ply')
-            self.save_to_ply(XYZ/1000, rs_path) 
+            #self.save_to_ply(XYZ/1000, rs_path) 
 
         return output_str    
 
@@ -397,7 +397,7 @@ class DataSource:
         # create 3D point cloud from zivid depth
         XYZ = self.project_camera_to_3d(depth_zivid_mm, CAMERA_MATRIX_ZIVID, DIST_COEFFS_ZIVID)  # (N, 3) array of 3D points in Zivid camera space
         # save to ply point cloud for visualization
-        self.save_to_ply(XYZ/1000, f'zivid_original_points_{finx:03d}.ply') # save in meters for visualization
+        #self.save_to_ply(XYZ/1000, f'zivid_original_points_{finx:03d}.ply') # save in meters for visualization
 
         # project back on imaage RS
         depth_zivid_projected_mm = self.project_3d_to_camera(XYZ, CAMERA_MATRIX_RS, DIST_COEFFS_RS, frame_size = depth_rs_mm.shape)  # (H, W) depth map of Zivid points projected into RealSense pixel space
