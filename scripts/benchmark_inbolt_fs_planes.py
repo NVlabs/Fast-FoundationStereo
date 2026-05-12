@@ -44,6 +44,7 @@ from metrics import (
     CLOSE_RANGE_THRESHOLD_M,
 )
 from report import ReportGenerator
+from finetune_inbolt_planes import find_flat_regions
 
 
 # ── custom report generator ──────────────────────────────────────────────────
@@ -166,8 +167,8 @@ ORIGINAL_PATH  = f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth'
 # MODEL_PATH      = f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth'
 #FINETUNED_PATH  = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt-20260415_epoch_111.pth'
 #DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark-model37-111-set-20260414_142239'
-FINETUNED_PATH  = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt_planes_epoch_120.pth'
-DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark-planes_epoch_120'
+FINETUNED_PATH  = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt_planes_25_epoch_012.pth'
+DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark-planes_25'
 N_VIZ = 5
 
 METHODS: Dict[str, Dict[str, str]] = {
@@ -281,6 +282,11 @@ def main():
         gt_m = gt_mm / 1000.0
         rs_m = rs_mm / 1000.0
 
+        # valid only for flat regions
+        valid = (gt_m > 0) 
+        valid = find_flat_regions(gt_mm, valid)
+        gt_m[valid == False] = 0.0
+
         frame_depths = {GT_NAME: gt_m, RS_NAME: rs_m}
         for mname, model in models.items():
             t0 = time.monotonic()
@@ -304,6 +310,7 @@ def main():
 
         for mname in active_methods:
             pred = frame_depths[mname]
+
             valid_acc[mname] += (pred > 0).astype(np.float32)
 
             if mname == GT_NAME:

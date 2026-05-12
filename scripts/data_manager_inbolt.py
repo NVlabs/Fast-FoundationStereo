@@ -78,9 +78,10 @@ DIST_COEFFS_ZIVID = np.array([
 #%% Data source
 class DataSource:
 
-    def __init__(self):
+    def __init__(self, train_mode = True):
         self.gray_scale_input = False
         self.imgs = []   # list of dicts: {left, right, depth_zivid, rgb}
+        self.train_mode = train_mode
         log.info('Source is defined')
 
     def init_directory(self, input_rectified='', gray_scale_input=False, sub_indexes=None):
@@ -100,12 +101,21 @@ class DataSource:
 
         # Each immediate sub-directory is a session
         try:
-            sessions = sorted([
-                os.path.join(input_rectified, d)
-                for d in os.listdir(input_rectified)
-                if os.path.isdir(os.path.join(input_rectified, d))
-                and d not in IGNORED_SESSIONS
-            ])
+            if self.train_mode:
+                sessions = sorted([
+                    os.path.join(input_rectified, d)
+                    for d in os.listdir(input_rectified)
+                    if os.path.isdir(os.path.join(input_rectified, d))
+                    and d not in IGNORED_SESSIONS
+                ])
+            else:
+                sessions = sorted([
+                    os.path.join(input_rectified, d)
+                    for d in os.listdir(input_rectified)
+                    if os.path.isdir(os.path.join(input_rectified, d))
+                    and d in IGNORED_SESSIONS
+                ])                
+
         except FileNotFoundError:
             log.error(f"Directory not found: {input_rectified}")
             return 0
