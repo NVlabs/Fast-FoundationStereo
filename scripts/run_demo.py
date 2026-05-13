@@ -23,11 +23,12 @@ import cv2
 if __name__=="__main__":
   code_dir = os.path.dirname(os.path.realpath(__file__))
   parser = argparse.ArgumentParser()
-  parser.add_argument('--model_dir', default=f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth', type=str)
-  parser.add_argument('--left_file', default=f'{code_dir}/../data/mono/img0074.jpg', type=str)
-  parser.add_argument('--right_file', default=f'{code_dir}/../data/mono/img0076.jpg', type=str)  
-  #parser.add_argument('--left_file', default=f'{code_dir}/../demo_data/left.png', type=str)
-  #parser.add_argument('--right_file', default=f'{code_dir}/../demo_data/right.png', type=str)
+
+  parser.add_argument('--model_dir', default=f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth', type=str)
+  # parser.add_argument('--left_file', default=f'{code_dir}/../data/mono/img0074.jpg', type=str)
+  # parser.add_argument('--right_file', default=f'{code_dir}/../data/mono/img0076.jpg', type=str)  
+  parser.add_argument('--left_file', default=f'{code_dir}/../demo_data/left.png', type=str)
+  parser.add_argument('--right_file', default=f'{code_dir}/../demo_data/right.png', type=str)
   parser.add_argument('--intrinsic_file', default=f'{code_dir}/../demo_data/K.txt', type=str, help='camera intrinsic matrix and baseline file')
   parser.add_argument('--out_dir', default=f'{code_dir}/../demo_data_out', type=str)
   parser.add_argument('--remove_invisible', default=1, type=int)

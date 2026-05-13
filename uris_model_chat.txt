@@ -1,0 +1,1059 @@
+ ▐▛███▜▌   Claude Code v2.1.126
+▝▜█████▛▘  Sonnet 4.6 · Claude Team
+  ▘▘ ▝▝    ~/repos/Fast-FoundationStereo
+
+❯ in the environment tao_stereo install onnx and trt compilation tool and run   
+  example of the network conversion                                             
+
+● Let me first explore the project structure to understand the context before
+  proceeding.
+
+● Bash(ls /home/adiroha/repos/Fast-FoundationStereo/ && conda env list
+      2>/dev/null || true)
+  ⎿  assets
+     core
+     data
+     … +26 lines (ctrl+o to expand)
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(find /home/adiroha/repos/Fast-FoundationStereo -name "*.py" | xargs grep
+      -l -i "onnx\|tensorrt\|trt" 2>/dev/null | head -20)
+  ⎿  /home/adiroha/repos/Fast-FoundationStereo/core/foundation_stereo.py
+     /home/adiroha/repos/Fast-FoundationStereo/scripts/make_onnx.py
+     /home/adiroha/repos/Fast-FoundationStereo/scripts/run_demo_tensorrt.py
+
+● Bash(conda run -n tao_stereo pip list 2>/dev/null | grep -i
+      "onnx\|tensorrt\|torch\|trt" | head -20)
+  ⎿  open_clip_torch           3.3.0
+     pytorch-lightning         2.6.1
+     torch                     2.10.0+cu126
+     … +3 lines (ctrl+o to expand)
+
+  Read 2 files (ctrl+o to expand)
+
+● Let me check CUDA version, requirements, and what's needed for TRT conversion.
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(nvcc --version 2>/dev/null; nvidia-smi 2>/dev/null | head -10)
+  ⎿  nvcc: NVIDIA (R) Cuda compiler driver
+     Copyright (c) 2005-2023 NVIDIA Corporation
+     Built on Fri_Jan__6_16:45:21_PST_2023
+     … +16 lines (ctrl+o to expand)
+
+● Bash(which trtexec 2>/dev/null; dpkg -l | grep -i tensorrt 2>/dev/null | head
+      -10; ls /usr/lib/python3/dist-packages/ 2>/dev/null | grep -i trt)
+  ⎿  No matches found
+
+  Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+● Now I have the full picture. Let me check the weights and then install the
+  required packages.
+
+  Listed 3 directories (ctrl+o to expand)
+
+● Now let me install the ONNX and TensorRT packages in the tao_stereo
+  environment.
+
+● Bash(conda run -n tao_stereo pip install onnx onnxruntime-gpu tensorrt-cu12
+      tensorrt-lean-cu12 tensorrt-dispatch-cu12 2>&1 | tail -20)
+  ⎿  Running in the background (↓ to manage)
+
+● Installation running in background. Let me set up the output directory and
+  review the ONNX script arguments.
+
+● Bash(mkdir -p /home/adiroha/repos/Fast-FoundationStereo/output/onnx_trt)
+  ⎿  Done
+
+● Background command "Install ONNX and TensorRT packages in tao_stereo env" completed (exit code 0)
+
+  Read 1 file (ctrl+o to expand)
+
+● All packages installed. Now let me find trtexec and run the ONNX export.
+
+● Bash(find /home/adiroha/miniconda3/envs/tao_stereo -name "trtexec"
+      2>/dev/null; conda run -n tao_stereo python -c "import tensorrt as trt;
+      print('TRT version:', trt.…)
+  ⎿  TRT version: 10.16.1.11
+  Listed 1 directory (ctrl+o to expand)
+
+● trtexec isn't included in the pip package — I'll use the TensorRT Python API
+  for ONNX→engine conversion. First, let me run the ONNX export.
+
+● Bash(conda run -n tao_stereo python -c "import cv2;
+      img=cv2.imread('assets/left.png'); print('Image size:', img.shape if img
+      is not None else 'not found')")
+  ⎿  [ WARN:0@0.009] global loadsave.cpp:278 findDecoder imread_('assets/le
+     ft.png'): can't open/read file: check file path/integrity
+
+     Image size: not found
+
+  Listed 1 directory (ctrl+o to expand)
+
+● No stereo test images in assets — I'll use the default 448x640 dimensions. Now
+   let me run the ONNX export.
+
+● Bash(conda run -n tao_stereo python scripts/make_onnx.py \
+          --model_dir weights/20-26-39/model_best_bp2_serialize.pth \…)
+  ⎿  Running in the background (↓ to manage)
+
+● While the ONNX export runs, let me write the TRT engine conversion script.
+
+● Write(scripts/make_trt_engine.py)
+  ⎿  Wrote 53 lines to scripts/make_trt_engine.py
+         API."""ert ONNX models to TensorRT engines using the Python TRT 
+       2 import argparse
+       3 import os
+       4 import tensorrt as trt
+       5 
+       7 TRT_LOGGER = trt.Logger(trt.Logger.VERBOSE)
+       8 
+       9 def build_engine(onnx_path: str, engine_path: str, fp16: bool = 
+         True, workspace_gb: int = 4):
+      10     builder = trt.Builder(TRT_LOGGER)
+     … +51 lines (ctrl+o to expand)
+
+● Background command "Export model to ONNX format" failed with exit code 1
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(conda run -n tao_stereo pip install onnxscript 2>&1 | tail -5)
+  ⎿  Downloading onnx_ir-0.2.1-py3-none-any.whl (166 kB)
+     Installing collected packages: onnx_ir, onnxscript
+
+     Successfully installed onnx_ir-0.2.1 onnxscript-0.7.0
+
+● Bash(conda run -n tao_stereo python scripts/make_onnx.py \
+          --model_dir weights/20-26-39/model_best_bp2_serialize.pth \…)
+  ⎿  Running in the background (↓ to manage)
+
+● ONNX export running again with onnxscript now installed. Let me wait for it.
+
+  Read 1 file (ctrl+o to expand)
+
+● Waiting for the ONNX export to produce output...
+
+  Listed 1 directory (ctrl+o to expand)
+
+● feature_runner.onnx is done (38MB data file). The post_runner.onnx export is
+  still in progress. Let me keep monitoring.
+
+  Read 1 file, listed 1 directory (ctrl+o to expand)
+
+● Background command "Re-run ONNX export" failed with exit code 1
+
+● The new PyTorch 2.10 ONNX exporter doesn't handle adaptive_max_pool2d. I need
+  to force the legacy TorchScript-based exporter with dynamo=False.
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(scripts/make_onnx.py)
+  ⎿  Added 4 lines, removed 2 lines
+      63          opset_version=17,
+      64          input_names = ['left', 'right'],
+      65          output_names = ['features_left_04', 'features_left_08',
+           'features_left_16', 'features_left_32', 'features_right_04', '
+          stem_2x'],
+      66 -        do_constant_folding=True                               
+      66 +        do_constant_folding=True,                              
+      67 +        dynamo=False,                                          
+      68      )
+      69  
+      70      features_left_04, features_left_08, features_left_16, featu
+          res_left_32, features_right_04, stem_2x = feature_runner(left_i
+          mg, right_img)
+     ...
+      78          opset_version=17,
+      79          input_names = ['features_left_04', 'features_left_08', 
+          'features_left_16', 'features_left_32', 'features_right_04', 's
+          tem_2x', 'gwc_volume'],
+      80          output_names = ['disp'],
+      80 -        do_constant_folding=True                               
+      81 +        do_constant_folding=True,                              
+      82 +        dynamo=False,                                          
+      83      )
+      84  
+      85      with open(f'{args.save_path}/onnx.yaml', 'w') as f:
+
+● Bash(rm -f /home/adiroha/repos/Fast-FoundationStereo/output/onnx_trt/*.onnx
+      /home/adiroha/repos/Fast-FoundationStereo/output/onnx_trt/*.data && conda
+      run -n tao_ster…)
+  ⎿  Running in the background (↓ to manage)
+● Bash(sleep 60 && cat /tmp/claude-1000/-home-adiroha-repos-Fast-FoundationStere
+      o/9e5eae82-b63e-4097-921a-bd15bd674371/tasks/bqvmt6zhn.output 2>/dev/null
+      | tail -20 &&…)
+  ⎿  Error: Blocked: sleep 60 followed by: cat 
+     /tmp/claude-1000/-home-adiroha-repos-Fast-FoundationStereo/9e5eae82-b63e-40
+     97-921a-bd15bd674371/tasks/bqvmt6zhn.output tail -20 ls -lh 
+     /home/adiroha/repos/Fast-FoundationStereo/output/onnx_trt/. To wait for a 
+     condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2;
+      done`). To wait for a command you started, use run_in_background: true. Do
+      not chain shorter sleeps to work around this block.
+
+● Background command "Re-run ONNX export with legacy exporter" completed (exit code 0)
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Both ONNX files exported successfully (37MB + 18MB). Now converting to TRT
+  engines.
+
+● Bash(conda run -n tao_stereo python scripts/make_trt_engine.py --onnx_dir
+      output/onnx_trt 2>&1)
+  ⎿  Running in the background (↓ to manage)
+
+● TRT engine compilation can take several minutes. Let me monitor progress.
+
+  Read 1 file (ctrl+o to expand)
+
+● TRT compilation in progress. I'll report back when the engines are ready —
+  this typically takes 3–10 minutes for the first compile on a new model.
+
+  ---
+  What's been done so far:
+
+  ┌──────────────────────────────────────────────────────────────┬──────────┐
+  │                             Step                             │  Status  │
+  ├──────────────────────────────────────────────────────────────┼──────────┤
+  │ Install onnx, onnxruntime-gpu, tensorrt-cu12 10.16.1         │ ✅       │
+  ├──────────────────────────────────────────────────────────────┼──────────┤
+  │ Install onnxscript (missing dep for PyTorch 2.10 exporter)   │ ✅       │
+  ├──────────────────────────────────────────────────────────────┼──────────┤
+  │ Fix make_onnx.py to use legacy TorchScript exporter          │ ✅       │
+  │ (dynamo=False) to avoid adaptive_max_pool2d dispatch error   │          │
+  ├──────────────────────────────────────────────────────────────┼──────────┤
+  │ Export feature_runner.onnx (37 MB)                           │ ✅       │
+  ├──────────────────────────────────────────────────────────────┼──────────┤
+  │ Export post_runner.onnx (18 MB)                              │ ✅       │
+  ├──────────────────────────────────────────────────────────────┼──────────┤
+  │ Write scripts/make_trt_engine.py (Python TRT API builder)    │ ✅       │
+  ├──────────────────────────────────────────────────────────────┼──────────┤
+  │ Build TRT engines (feature_runner.engine,                    │ ⏳       │
+  │ post_runner.engine)                                          │ running  │
+  └──────────────────────────────────────────────────────────────┴──────────┘
+
+✻ Baked for 10m 48s
+
+✻ Claude resuming /loop wakeup (Apr 26 3:02pm)
+
+  Read 1 file, listed 1 directory (ctrl+o to expand)
+
+● feature_runner.engine (21 MB) is compiled. post_runner.engine still in
+  progress — let me wait for it.
+
+● feature_runner.engine done (21 MB). post_runner.engine still compiling — I'll
+  report back when it finishes.
+
+✻ Claude resuming /loop wakeup (Apr 26 3:03pm)
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Both ONNX files exist and TRT conversion is already running (job byephtlsb).
+  feature_runner.engine is done (21 MB), post_runner.engine still compiling.
+  Output file is empty so far — TRT logging goes to stderr after the build
+  completes.
+
+● Still waiting on post_runner.engine. I'll update you when it's done.
+
+✻ Claude resuming /loop wakeup (Apr 26 3:05pm)
+
+✻ Claude resuming /loop wakeup (Apr 26 3:05pm)
+
+  Listed 1 directory (ctrl+o to expand)
+
+● post_runner.engine still not written — compilation ongoing. Scheduling another
+   check.
+● Still compiling — post_runner is the larger/more complex subgraph. Will check
+  again in ~4 minutes.
+
+✻ Claude resuming /loop wakeup (Apr 26 3:06pm)
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Bash(ps aux | grep -i "make_trt\|trt_engine\|tensorrt" | grep -v grep)
+  ⎿  adiroha  2166525  0.0  0.0  10072  3740 ?        Ss   14:48   0:00 /bi
+     n/bash -c source /home/adiroha/.claude/shell-snapshots/snapshot-bash-1
+     777204063714-7d3qxc.sh 2>/dev/null || true && shopt -u extglob 2>/dev/
+     … +13 lines (ctrl+o to expand)
+
+● Process is alive and running hot (PID 2191990, ~80% CPU, 7.6 GB RAM). The TRT
+  builder is crunching through post_runner. Output is still buffered — nothing
+  printed until build_serialized_network() returns. This is normal for complex
+  models.
+
+● Still compiling post_runner — process is healthy, just CPU-bound on kernel
+  optimization. Checking again in ~4 min.
+
+✻ Sautéed for 38s
+
+● Background command "Convert ONNX models to TRT engines" completed (exit code
+0)
+
+  Read 1 file, listed 1 directory (ctrl+o to expand)
+
+● Both engines compiled and saved successfully. Here's the full summary:
+
+  ONNX export — done (using legacy TorchScript exporter with dynamo=False)
+  - feature_runner.onnx — 37 MB, opset 17, PyTorch 2.10.0
+  - post_runner.onnx — 18 MB
+
+  TRT engine compilation — done in ~6 minutes (15:00 → 15:06), FP16 enabled on
+  RTX 4080
+  - feature_runner.engine — 21 MB
+  - post_runner.engine — 14 MB
+
+  All four files are in output/onnx_trt/. The engines are ready to use with
+  scripts/run_demo_tensorrt.py — you just need a stereo pair (--left_file,
+  --right_file) and camera intrinsics (--intrinsic_file).
+
+✻ Claude resuming /loop wakeup (Apr 26 3:09pm)
+
+● Both engines already completed — I reported this in my previous message. To
+  confirm:
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Everything is complete and healthy:
+
+  ┌───────────────────────┬───────┬──────────────────────────────┐
+  │         File          │ Size  │            Status            │
+  ├───────────────────────┼───────┼──────────────────────────────┤
+  │ feature_runner.onnx   │ 37 MB │ ✅ exported                  │
+  ├───────────────────────┼───────┼──────────────────────────────┤
+  │ post_runner.onnx      │ 18 MB │ ✅ exported                  │
+  ├───────────────────────┼───────┼──────────────────────────────┤
+  │ feature_runner.engine │ 21 MB │ ✅ compiled (FP16, RTX 4080) │
+  ├───────────────────────┼───────┼──────────────────────────────┤
+  │ post_runner.engine    │ 14 MB │ ✅ compiled (FP16, RTX 4080) │
+  ├───────────────────────┼───────┼──────────────────────────────┤
+  │ onnx.yaml             │ 178 B │ ✅ model config              │
+  └───────────────────────┴───────┴──────────────────────────────┘
+
+  The engines are ready. To run inference, provide a stereo pair:
+
+  conda run -n tao_stereo python scripts/run_demo_tensorrt.py \
+    --onnx_dir output/onnx_trt \
+    --left_file <left.png> \
+    --right_file <right.png> \
+    --intrinsic_file <K.txt> \
+    --out_dir output/trt_demo
+
+✻ Claude resuming /loop wakeup (Apr 26 3:11pm)
+
+● Already done — both engines compiled successfully. No need to recheck.
+
+  Final status:
+
+  ┌───────────────────────┬───────┬────────────────────────┐
+  │         File          │ Size  │        Details         │
+  ├───────────────────────┼───────┼────────────────────────┤
+  │ feature_runner.engine │ 21 MB │ FP16, compiled 15:01   │
+  ├───────────────────────┼───────┼────────────────────────┤
+  │ post_runner.engine    │ 14 MB │ FP16, compiled 15:06   │
+  ├───────────────────────┼───────┼────────────────────────┤
+  │ feature_runner.onnx   │ 37 MB │ opset 17, PyTorch 2.10 │
+  ├───────────────────────┼───────┼────────────────────────┤
+  │ post_runner.onnx      │ 18 MB │ opset 17, PyTorch 2.10 │
+  └───────────────────────┴───────┴────────────────────────┘
+
+  What was installed in tao_stereo:
+  - onnx 1.21.0 + onnxscript 0.7.0
+  - onnxruntime-gpu 1.23.2
+  - tensorrt-cu12 10.16.1 + lean/dispatch variants
+
+  Fix applied to make_onnx.py: added dynamo=False to both torch.onnx.export
+  calls — the new PyTorch 2.10 dynamo exporter lacks a decomposition for
+  aten.adaptive_max_pool2d, the legacy TorchScript exporter handles it fine.
+
+  New file added: scripts/make_trt_engine.py — Python TRT API builder (replaces
+  trtexec which isn't included in pip-installed TensorRT).
+
+※ recap: Installed ONNX and TensorRT 10.16 in tao_stereo and converted the FoundationStereo model to two TRT engines (FP16, RTX 4080) saved in output/onnx_trt. Next: run inference with scripts/run_demo_tensorrt.py using a real stereo pair. (disable recaps in /config)
+
+❯ create new file benchmark_inbolt_trt.py that will run the orifinal tests plus 
+   trt model created from fast foundation finetuned model                       
+
+● Let me read the existing benchmark files and TRT runner to understand what to
+  combine.
+
+  Read 3 files, listed 1 directory (ctrl+o to expand)
+
+● Now let me check the ONNX yaml and the data manager to understand image sizes.
+
+  Read 1 file (ctrl+o to expand)
+
+● Now I have everything I need. Let me write the benchmark file.
+
+● Write(scripts/benchmark_inbolt_trt.py)
+  ⎿  Wrote 457 lines to scripts/benchmark_inbolt_trt.py
+        FS-TRT (TensorRT FP16) on Inbolt.d FFS (PyTorch) and fine-tuned F
+      3 Extends ``benchmark_inbolt_fs.py`` by adding a TensorRT FP16 mode
+        l alongside the
+        ccuracy and speedd RealSense hardware depth, so you can compare a
+      5 between the full-precision PyTorch path and the compiled TRT engi
+      6 ne.
+        l weights:gines must be built beforehand from the fine-tuned mode
+      8   1. python scripts/make_onnx.py --model_dir <finetuned.pth> --sa
+      9   2. python scripts/make_trt_engine.py --onnx_dir output/onnx_trt
+        _ft
+     … +535 lines (ctrl+o to expand)
+
+● Now let me do a quick import check to catch any obvious errors:
+
+● Bash(conda run -n tao_stereo python -c "
+      import sys, os…)  ⎿  AST parse OK
+     benchmark_inbolt imports OK
+     TrtRunner import OK
+
+● All imports resolve cleanly. Here's what the new file adds on top of
+  benchmark_inbolt_fs.py:
+
+  New method: finetuned_trt (purple)
+  - Loaded via load_trt_model(trt_dir) — reads feature_runner.engine +
+  post_runner.engine + onnx.yaml; gracefully skips if any file is missing
+  - infer_depth_m_trt resizes the IR images to the fixed TRT engine resolution
+  (448×640), runs TrtRunner.forward(), then resizes disparity back and divides
+  by fx to restore original-pixel-unit disparity before the BF depth conversion
+
+  Key CLI args:
+  python scripts/benchmark_inbolt_trt.py \
+    --trt_dir output/onnx_trt \   # default — point here or at a dir built from 
+  finetuned weights
+    --trt_height 448 --trt_width 640 \
+    --out_dir reports/inbolt_trt_benchmark
+
+  Note: the current engines in output/onnx_trt/ were built from the original
+  model weights. To compare the finetuned TRT model, rebuild the engines from
+  the finetuned .pth:
+  python scripts/make_onnx.py \
+    --model_dir weights/23-36-37/model_finetuned_inbolt-20260415_epoch_111.pth \
+    --save_path output/onnx_trt_ft
+  python scripts/make_trt_engine.py --onnx_dir output/onnx_trt_ft
+  Then pass --trt_dir output/onnx_trt_ft.
+
+✻ Cooked for 3m 40s
+
+※ recap: Benchmarking FastFoundationStereo on the Inbolt dataset with TensorRT acceleration. ONNX export and TRT engine compilation are complete; the next step is rebuilding the engines from the finetuned model weights and running benchmark_inbolt_trt.py. (disable recaps in /config)
+
+❯ add rebuild command to the benchmark_inbolt_trt.py to run at the beginning    
+
+  Read 2 files (ctrl+o to expand)
+
+● Now I have everything. I'll add the rebuild function inline (no subprocess),
+  importing TrtFeatureRunner, TrtPostRunner, build_gwc_volume_triton, and
+  build_engine directly.
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(scripts/benchmark_inbolt_trt.py)
+  ⎿  Added 8 lines, removed 7 lines
+       4  PyTorch models and RealSense hardware depth, so you can compare
+           accuracy and speed
+       5  between the full-precision PyTorch path and the compiled TRT en
+          gine.
+       6  
+       7 -The TRT engines must be built beforehand from the fine-tuned mo
+         -del weights:                                                   
+       8 -  1. python scripts/make_onnx.py --model_dir <finetuned.pth> --
+         -save_path output/onnx_trt_ft                                   
+       9 -  2. python scripts/make_trt_engine.py --onnx_dir output/onnx_t
+         -rt_ft                                                          
+       7 +Pass --rebuild_trt to export ONNX and compile TRT engines from 
+         +the fine-tuned model                                           
+       8 +at the start of the run (requires ~10 min on first compile).  T
+         +he engines are written                                         
+       9 +to --trt_dir and reused on subsequent runs without --rebuild_tr
+         +t.                                                             
+      10  
+      11 -Then point --trt_dir at the directory containing feature_runner
+         -.engine and                                                    
+      12 -post_runner.engine (and onnx.yaml).                            
+      13 -                                                               
+      11  Usage:
+      12    cd /home/adiroha/repos/Fast-FoundationStereo
+      16 -  python scripts/benchmark_inbolt_trt.py [--trt_dir output/onnx
+         -_trt] [--out_dir reports/inbolt_trt_benchmark]                 
+      13 +  # First run: build engines then benchmark                    
+      14 +  python scripts/benchmark_inbolt_trt.py --rebuild_trt [--trt_d
+         +ir output/onnx_trt_ft]                                         
+      15 +  # Subsequent runs: reuse existing engines                    
+      16 +  python scripts/benchmark_inbolt_trt.py [--trt_dir output/onnx
+         +_trt_ft] [--out_dir reports/inbolt_trt_benchmark]              
+      17  """
+      18  
+      19  import argparse
+     ...
+      21  import os
+      22  import sys
+      23  import time
+      24 +import warnings                                                
+      25  import cv2
+      26  from pathlib import Path
+      27  from typing import Dict, Optional
+
+● Update(scripts/benchmark_inbolt_trt.py)
+  ⎿  Added 2 lines, removed 1 line
+      52      CLOSE_RANGE_THRESHOLD_M,
+      53  )
+      54  from report import ReportGenerator
+      55 -from core.foundation_stereo import TrtRunner                   
+      55 +from core.foundation_stereo import TrtRunner, TrtFeatureRunner,
+         + TrtPostRunner, build_gwc_volume_triton                        
+      56 +from make_trt_engine import build_engine                       
+      57  
+      58  
+      59  # ── constants ────────────────────────────────────────────────
+          ────────────────
+
+● Now add the rebuild_trt_engines function right after the constants block:
+
+● Update(scripts/benchmark_inbolt_trt.py)
+  ⎿  Added 86 lines
+       78  RS_NAME = 'depth_rs'
+       79  
+       80  
+       81 +# ── TRT build ───────────────────────────────────────────────
+          +─────────────────                                             
+       82 +                                                              
+       83 +def rebuild_trt_engines(model_path: str, trt_dir: str, height:
+          + int, width: int) -> None:                                    
+       84 +    """Export the model at *model_path* to ONNX, then compile 
+          +both TRT engines.                                             
+       85 +                                                              
+       86 +    Writes to *trt_dir*:                                      
+       87 +        feature_runner.onnx / feature_runner.engine           
+       88 +        post_runner.onnx    / post_runner.engine              
+       89 +        onnx.yaml                                             
+       90 +    """                                                       
+       91 +    assert height % 32 == 0 and width % 32 == 0, \            
+       92 +        f"height and width must be divisible by 32, got {heigh
+          +t}x{width}"                                                   
+       93 +                                                              
+       94 +    os.makedirs(trt_dir, exist_ok=True)                       
+       95 +    logging.info(f'[rebuild] Loading model from {model_path}')
+       96 +    model = torch.load(model_path, map_location='cpu', weights
+          +_only=False)                                                  
+       97 +    model.cuda().eval()                                       
+       98 +                                                              
+       99 +    feature_runner = TrtFeatureRunner(model).cuda().eval()    
+      100 +    post_runner    = TrtPostRunner(model).cuda().eval()       
+      101 +                                                              
+      102 +    dummy_left  = torch.randn(1, 3, height, width, device='cud
+          +a').float() * 255                                             
+      103 +    dummy_right = torch.randn(1, 3, height, width, device='cud
+          +a').float() * 255                                             
+      104 +                                                              
+      105 +    # ── feature runner → ONNX ───────────────────────────────
+          +─────────────────                                             
+      106 +    feature_onnx = os.path.join(trt_dir, 'feature_runner.onnx'
+          +)                                                             
+      107 +    logging.info(f'[rebuild] Exporting feature_runner → {featu
+          +re_onnx}')                                                    
+      108 +    with warnings.catch_warnings():                           
+      109 +        warnings.simplefilter('ignore')                       
+      110 +        torch.onnx.export(                                    
+      111 +            feature_runner,                                   
+      112 +            (dummy_left, dummy_right),                        
+      113 +            feature_onnx,                                     
+      114 +            opset_version=17,                                 
+      115 +            input_names=['left', 'right'],                    
+      116 +            output_names=['features_left_04', 'features_left_0
+          +8', 'features_left_16',                                       
+      117 +                          'features_left_32', 'features_right_
+          +04', 'stem_2x'],                                              
+      118 +            do_constant_folding=True,                         
+      119 +            dynamo=False,                                     
+      120 +        )                                                     
+      121 +                                                              
+      122 +    # ── post runner → ONNX ──────────────────────────────────
+          +─────────────────                                             
+      123 +    with torch.no_grad():                                     
+      124 +        feats = feature_runner(dummy_left, dummy_right)       
+      125 +        f04, f08, f16, f32, fr04, stem_2x = feats             
+      126 +        cv_group = getattr(model, 'cv_group', 8)              
+      127 +        gwc_volume = build_gwc_volume_triton(                 
+      128 +            f04.half(), fr04.half(), model.args.max_disp // 4,
+          + cv_group                                                     
+      129 +        )                                                     
+      130 +                                                              
+      131 +    post_onnx = os.path.join(trt_dir, 'post_runner.onnx')     
+      132 +    logging.info(f'[rebuild] Exporting post_runner → {post_onn
+          +x}')                                                          
+      133 +    with warnings.catch_warnings():                           
+      134 +        warnings.simplefilter('ignore')                       
+      135 +        torch.onnx.export(                                    
+      136 +            post_runner,                                      
+      137 +            (f04.float(), f08.float(), f16.float(), f32.float(
+          +),                                                            
+      138 +             fr04.float(), stem_2x.float(), gwc_volume.float()
+          +),                                                            
+      139 +            post_onnx,                                        
+      140 +            opset_version=17,                                 
+      141 +            input_names=['features_left_04', 'features_left_08
+          +', 'features_left_16',                                        
+      142 +                         'features_left_32', 'features_right_0
+          +4', 'stem_2x', 'gwc_volume'],                                 
+      143 +            output_names=['disp'],                            
+      144 +            do_constant_folding=True,                         
+      145 +            dynamo=False,                                     
+      146 +        )                                                     
+      147 +                                                              
+      148 +    # ── save model config ───────────────────────────────────
+          +──────────────────                                            
+      149 +    yaml_path = os.path.join(trt_dir, 'onnx.yaml')            
+      150 +    with open(yaml_path, 'w') as f:                           
+      151 +        yaml.safe_dump(OmegaConf.to_container(model.args), f) 
+      152 +    logging.info(f'[rebuild] Saved onnx.yaml → {yaml_path}')  
+      153 +                                                              
+      154 +    # ── compile TRT engines ─────────────────────────────────
+          +──────────────────                                            
+      155 +    del model, feature_runner, post_runner  # free GPU memory 
+          +before TRT build                                              
+      156 +    torch.cuda.empty_cache()                                  
+      157 +                                                              
+      158 +    for name in ('feature_runner', 'post_runner'):            
+      159 +        onnx_path   = os.path.join(trt_dir, f'{name}.onnx')   
+      160 +        engine_path = os.path.join(trt_dir, f'{name}.engine') 
+      161 +        logging.info(f'[rebuild] Compiling {name}.engine (this
+          + may take several minutes) …')                                
+      162 +        build_engine(onnx_path, engine_path, fp16=True, worksp
+          +ace_gb=4)                                                     
+      163 +                                                              
+      164 +    logging.info(f'[rebuild] TRT engines ready in {trt_dir}') 
+      165 +                                                              
+      166 +                                                              
+      167  # ── TRT helpers ─────────────────────────────────────────────
+           ──────────────────
+      168  
+      169  def load_trt_model(trt_dir: str) -> Optional[TrtRunner]:
+
+● Now wire it into main() — add the flag and call it before loading the TRT
+  model:
+
+● Update(scripts/benchmark_inbolt_trt.py)
+  ⎿  Added 2 lines
+      354                          help='Directory with feature_runner.en
+           gine, post_runner.engine, onnx.yaml')
+      355      parser.add_argument('--trt_height', type=int, default=448,
+            help='TRT engine input height')
+      356      parser.add_argument('--trt_width',  type=int, default=640,
+            help='TRT engine input width')
+      357 +    parser.add_argument('--rebuild_trt', action='store_true', 
+      358 +                        help='Re-export ONNX and recompile TRT
+          + engines from --finetuned before benchmarking')               
+      359      parser.add_argument('--n_viz', type=int, default=N_VIZ, he
+           lp='Frames saved for visual comparison')
+      360      args = parser.parse_args()
+      361  
+
+● Update(scripts/benchmark_inbolt_trt.py)
+  ⎿  Added 6 lines
+      363      out_dir = Path(args.out_dir)
+      364      out_dir.mkdir(parents=True, exist_ok=True)
+      365  
+      366 +    # ── optionally rebuild TRT engines ──────────────────────
+          +──────────────────                                            
+      367 +    if args.rebuild_trt:                                      
+      368 +        build_src = resolve_finetuned_model_path(args.finetune
+          +d) or args.original                                           
+      369 +        logging.info(f'[rebuild_trt] Building TRT engines from
+          + {build_src} → {args.trt_dir}')                               
+      370 +        rebuild_trt_engines(build_src, args.trt_dir, args.trt_
+          +height, args.trt_width)                                       
+      371 +                                                              
+      372      # ── load PyTorch models ─────────────────────────────────
+           ──────────────────
+      373      pt_models = {}
+      374      finetuned_path = resolve_finetuned_model_path(args.finetun
+           ed)
+
+● Now verify the final file parses and all symbols exist:
+
+● Bash(conda run -n tao_stereo python -c "
+      import sys, os, ast, pathlib…)
+  ⎿  AST parse OK
+     build_engine import OK
+     TrtFeatureRunner/TrtPostRunner/build_gwc_volume_triton imports OK
+     all symbols OK
+
+● Everything checks out. Here's what was added:
+
+  rebuild_trt_engines(model_path, trt_dir, height, width) — runs in-process (no
+  subprocess):
+  1. Loads the model weights onto GPU
+  2. Wraps in TrtFeatureRunner / TrtPostRunner and exports both to ONNX with the
+   legacy TorchScript exporter (dynamo=False, warnings suppressed)
+  3. Saves onnx.yaml from the model's args
+  4. Frees GPU memory, then calls build_engine() for each ONNX file to compile
+  the TRT engines
+
+  Wired into main() — runs before anything else if --rebuild_trt is passed.
+  Falls back to the original model if no finetuned checkpoint is found:
+
+  # build engines from finetuned model, then benchmark — one command
+  python scripts/benchmark_inbolt_trt.py \
+    --rebuild_trt \
+    --finetuned weights/23-36-37/model_finetuned_inbolt-20260415_epoch_111.pth \
+    --trt_dir output/onnx_trt_ft \
+    --out_dir reports/inbolt_trt_benchmark
+
+  # subsequent runs reuse existing engines (no rebuild)
+  python scripts/benchmark_inbolt_trt.py \
+    --trt_dir output/onnx_trt_ft \
+    --out_dir reports/inbolt_trt_benchmark
+
+✻ Cooked for 1m 56s
+
+※ recap: Built ONNX export and TRT engine compilation for FastFoundationStereo in the tao_stereo env, then created benchmark_inbolt_trt.py to compare PyTorch and TRT models on Inbolt. Run with --rebuild_trt to compile engines from the finetuned model and benchmark in one command. (disable recaps in /config)
+
+● Background command "Search for trtexec binary and tensorrt directories"
+completed (exit code 0)
+
+● That's a stale notification from the initial trtexec search at the start of
+  the session — no action needed. All TRT work is already complete.
+
+❯ /branch 
+  ⎿  Branched conversation. You are now in the branch. Use /resume 9e5eae82-b63e-4097-921a-bd15bd674371 to return to the original.
+
+❯ /rename niv_fork_for_uris_net 
+  ⎿  Session renamed to: niv_fork_for_uris_net
+
+❯ im trying to understand the concepts you used when creating this new network  
+  lets go step by step what you added to the ffs so i will understand that      
+
+● Good question to start with — let me be precise about what we actually did,
+  because we didn't change the FFS network architecture at all. The model
+  weights and math are identical. What we built is a deployment pipeline that
+  takes the existing model and makes it run faster on GPU.
+
+  Here's the outline — tell me which step to dive into first:
+
+  ---
+  Step 1 — The original model (FFS)
+  The full PyTorch model runs as one monolithic forward pass. It has two
+  conceptually distinct stages:
+  - A feature extractor (ViT backbone → multi-scale feature maps)
+  - A disparity estimator (cost volume + GRU refinement loop → upsampled
+  disparity)
+
+  Step 2 — Splitting into TrtFeatureRunner + TrtPostRunner
+  We split those two stages into separate modules. This is required because the
+  middle step (building the GWC correlation volume with Triton) isn't
+  expressible in ONNX — it has to stay in PyTorch and run between the two
+  exported parts.
+
+  Step 3 — ONNX export
+  Each part is traced with dummy inputs and serialized to the ONNX format — a
+  vendor-neutral graph representation of the computation.
+
+  Step 4 — TensorRT compilation
+  TensorRT takes each ONNX graph and compiles it into a GPU-native .engine file:
+   it fuses layers, picks the fastest CUDA kernels for this specific GPU (RTX
+  4080), and converts weights to FP16.
+
+  Step 5 — Inference at benchmark time
+  The engines expect a fixed input size (448×640), so we resize the camera
+  images, run both engines with the Triton volume step in between, then scale
+  the disparity back to original resolution for depth conversion.
+
+  ---
+  Which step do you want to unpack first?
+
+✻ Cooked for 23s
+
+❯ i think you drifted away from what i mean, you just enhanced the ffs model    
+  with rs_prior data and im trying to understand the concepts you used there    
+● Let me look at those files — they were in the repo before this session.
+
+  Read 1 file (ctrl+o to expand)
+
+● Got it, now I see exactly what you mean. The finetune_inbolt_depthrs.py adds
+  three fusion points where RealSense depth is injected into the FFS pipeline.
+  Let me walk through them one by one.
+
+  ---
+  The core idea
+
+  FFS normally only sees two IR images (left + right). This enhancement says: we
+   also have a noisy-but-free depth reading from the RS hardware sensor — let's 
+  teach the network to use it as a hint at three places in the pipeline.
+
+  ---
+  Stage 1 — Early: depth features fused into image features
+
+  DepthEncoder takes the RS depth map (normalized to [0,1]) plus a validity mask
+   (1=valid pixel, 0=missing) and runs it through a small 4-scale CNN, producing
+   depth feature maps at 1/4, 1/8, 1/16, 1/32 resolution.
+
+  DepthFusionModule then adds those depth features residually into the
+  left-image feature maps that the backbone already produced — one 1×1
+  convolution per scale, zero-initialized so at the start of training it
+  contributes nothing and the model starts from the pretrained behaviour.
+
+  Stage 2 — Mid: Gaussian prior bias on the cost volume
+
+  After the cost volume is built and aggregated, the model computes a softmax
+  over disparity bins to get an initial disparity estimate. This stage adds a
+  Gaussian "bump" centered at the disparity predicted from the RS depth
+  measurement onto the logits before that softmax — making the network's initial
+   guess gravitate toward the RS reading where it's valid. Two learned scalars
+  control this: depth_sigma (how sharp/wide the Gaussian is) and
+  depth_prior_scale (overall weight of the bias).
+
+  Stage 3 — Late: learned blend for GRU initialization
+
+  DepthInitBlend takes the stereo soft-argmax result, the RS-derived disparity
+  prior, and the validity mask, and learns a pixel-wise blend weight. Where RS
+  depth is valid and the blend weight is high, the GRU starts from the
+  RS-derived disparity rather than the pure stereo estimate. The final output
+  nn.Conv2d is bias-initialized to −5 so sigmoid(−5) ≈ 0.007 — meaning it starts
+   almost fully trusting stereo and only slowly learns to trust RS depth.
+
+  ---
+  Which stage do you want to go deeper on?
+
+✻ Brewed for 29s
+
+❯ each and every one of them, i want to understand if they are all necessary,   
+  and if they might create more noise than signal. lets deep dive into each one 
+
+● Let me go through each stage honestly — including where I think the design is
+  sound and where it could backfire.
+
+  ---
+  Stage 1 — Early: DepthEncoder + DepthFusionModule
+
+  What it does
+
+  RS depth + validity mask → small 4-scale CNN → feature maps at 1/4…1/32
+  resolution → added residually (via 1×1 conv, zero-init) into the left image 
+  feature maps from the backbone.
+
+  Why the zero-init matters
+
+  At training start, the 1×1 projections output exactly zero, so the model
+  starts from the pretrained stereo behaviour. The network has to earn the depth
+   contribution via gradient descent. This is a sound training stability trick.
+
+  The validity masking per scale
+
+  v4  = F.max_pool2d(validity, 2, 2)   # H/4
+  d4  = self.stage1(x2) * v4
+  Using max-pool on the validity mask means a coarse-scale cell is valid if any
+  fine-scale pixel in it was valid. That's intentionally conservative — better
+  to use a slightly noisy valid region than to zero out real signal.
+
+  Where it can create noise over signal
+
+  The depth features are added to the left features only. Those left features
+  then go into the cost volume — which is a cross-correlation between left and
+  right. The right features are untouched. So you're introducing an asymmetry:
+  the left side now "knows" something about depth that the right side doesn't.
+  If the RS depth is accurate, this helps the left features tell the cost volume
+   "look near this disparity". If RS depth is wrong (reflective surface,
+  occluded region, edge bleed), it corrupts the feature matching for that region
+   and the cost volume gets a misleading signal that's hard to override
+  downstream.
+
+  Verdict: This is the riskiest of the three. The benefit is real but the
+  corruption of feature-matching asymmetry is a genuine concern. Worth ablating
+  — Stage 2 alone may give most of the gain at lower risk.
+
+  ---
+  Stage 2 — Mid: Gaussian prior bias on cost volume logits
+
+  What it does
+
+  After the cost volume produces logits over disparity bins (shape B × D × H/4 ×
+   W/4), this adds a Gaussian bump centered at the disparity predicted from RS
+  depth:
+
+  d_idx      = arange(D)                          # disparity bin index
+  prior_bias = -0.5 * ((d_idx - disp_prior_14) / sigma)²
+  logits     = logits + depth_prior_scale * prior_bias
+
+  Why this is the most principled stage
+
+  It's a proper Bayesian-style prior injection. The logits are log-probabilities
+   (before softmax), so adding a Gaussian in log-space is exactly equivalent to
+  multiplying the stereo probability distribution by a Gaussian prior — which is
+   the textbook way to combine two uncertain measurements. The stereo evidence
+  can still dominate if it's strong; the prior only matters when stereo evidence
+   is weak (textureless regions, bad lighting).
+
+  The two learned scalars
+
+  - depth_sigma (init=4.0 disparity units at 1/4 scale): controls how tight the
+  prior is. Too small → a slightly wrong RS reading creates a sharp misleading
+  spike. Too large → the prior is so diffuse it does nothing.
+  - depth_prior_scale (init=0.1): overall weight. Starts near-zero, network
+  learns how much to trust RS globally.
+
+  Where it can create noise
+
+  RS depth suffers from mixed-pixel / edge bleed — at depth discontinuities the
+  sensor averages foreground and background, giving a reading that belongs to
+  neither. In those pixels the Gaussian bump is centered at a phantom disparity,
+   and if depth_sigma has learned to be tight, it actively suppresses the
+  correct bin. The validity mask doesn't help here — the pixel is valid, just
+  wrong.
+
+  Verdict: The cleanest and lowest-risk stage. This one is almost certainly
+  worth keeping.
+
+  ---
+  Stage 3 — Late: DepthInitBlend (GRU initialisation)
+
+  What it does
+
+  Takes three inputs at 1/4 resolution: the stereo soft-argmax stereo_init, the
+  RS-derived disparity disp_prior_14, and the validity mask. A small 3-layer CNN
+   predicts a per-pixel blend weight w = sigmoid(...), and outputs:
+
+  blend_w * disp_prior + (1 - blend_w) * stereo_init
+
+  The last conv is bias-init to −5 → sigmoid(−5) ≈ 0.007 at the start, so the
+  GRU initialises almost entirely from the stereo soft-argmax.
+
+  The claimed benefit
+
+  The GRU is iterative (8 iterations here). A better initialisation means it
+  needs fewer iterations to converge, and reduces the risk of getting stuck at
+  the wrong disparity. RS depth, even noisy, can cut across textureless regions
+  where stereo's soft-argmax is genuinely confused.
+
+  The redundancy problem
+
+  This is where I'd push back hardest. After Stage 2, stereo_init is already 
+  biased toward the RS prior — the Gaussian bump in logits has already nudged
+  the soft-argmax in that direction. Stage 3 then takes that already-biased
+  estimate and blends it again with the raw RS disparity. In the good case (RS
+  correct, Stage 2 worked) you've over-counted the RS signal twice. In the bad
+  case (RS wrong at an edge), the GRU starts from the wrong disparity and has to
+   spend all 8 iterations fighting its way back to the correct answer — the
+  iterative mechanism that's supposed to be robust to bad init is now working
+  against you.
+
+  The other risk: local minima
+
+  RAFT-style GRUs are known to be fairly robust to initialisation within a 
+  reasonable range. But "reasonable" here means within a few disparity units. If
+   a RS edge-bleed pixel pushes the init 30 disparity units off, 8 iterations
+  may genuinely not be enough to recover.
+
+  Verdict: Most questionable of the three. Partially redundant with Stage 2, and
+   introduces GRU convergence risk. If you had to cut one stage, cut this one
+  first and see if loss changes at all.
+
+  ---
+  Summary table
+
+  ┌────────────────┬──────────────────┬───────────────────────┬────────────┐
+  │     Stage      │    Mechanism     │         Risk          │   Worth    │
+  │                │                  │                       │  keeping?  │
+  ├────────────────┼──────────────────┼───────────────────────┼────────────┤
+  │                │ Residual depth   │ Corrupts              │            │
+  │ 1 —            │ features → left  │ feature-matching      │ Ablate     │
+  │ DepthEncoder   │ image features   │ asymmetry if RS is    │ first      │
+  │                │                  │ wrong                 │            │
+  ├────────────────┼──────────────────┼───────────────────────┼────────────┤
+  │ 2 — Gaussian   │ Adds prior bump  │ Edge-bleed pixels get │ Almost     │
+  │ prior          │ to cost-volume   │  tight wrong prior    │ certainly  │
+  │                │ logits           │                       │ yes        │
+  ├────────────────┼──────────────────┼───────────────────────┼────────────┤
+  │ 3 —            │ Blends stereo    │ Redundant with Stage  │ Ablate     │
+  │ DepthInitBlend │ init with RS     │ 2; GRU local minima   │ second     │
+  │                │ disparity        │ risk                  │            │
+  └────────────────┴──────────────────┴───────────────────────┴────────────┘
+
+  The clean experiment to run: train three variants — Stage 2 only, Stages 1+2,
+  all three — and compare validation loss. My guess is Stage 2 alone gets you
+  80%+ of the gain.
+
+✻ Cooked for 55s
+
+❯ two follow up questions- 1. is it possible that using just one would yeild    
+  superior results? 2. this model uses all 192 disparities?                     
+
+● Two sharp questions. Let me take them in order.
+
+  ---
+  1. Could using just one stage yield superior results?
+
+  Yes, genuinely possible — and Stage 2 alone is my best candidate to outperform
+   all three combined. Here's why.
+
+  The double-counting problem
+
+  After Stage 2 biases the soft-argmax toward the RS prior, stereo_init is
+  already a mix of stereo evidence and RS prior. Stage 3 then takes that
+  already-biased estimate and blends it again with disp_prior. If you expand the
+   algebra:
+
+  stereo_init  ≈ α·disp_prior + (1-α)·pure_stereo        # after Stage 2
+  final_init    = β·disp_prior + (1-β)·stereo_init
+               = (β + (1-β)·α)·disp_prior + (1-β)·(1-α)·pure_stereo
+
+  The effective weight on the RS prior is higher than either stage intended.
+  When RS is correct this is fine; when RS is wrong at an edge, both stages
+  compound the error into the GRU starting point.
+
+  The limited data problem
+
+  The Inbolt dataset isn't large. Three fusion stages means three sets of new
+  parameters competing for gradient signal. With less data, a single well-placed
+   module generalises better than three weakly-constrained ones trying to
+  cooperate.
+
+  The asymmetry problem in Stage 1
+
+  Adding depth features to left-only features while right features stay
+  unchanged creates an input mismatch the cost volume wasn't designed to handle.
+   If Stage 1 learned to encode RS noise, the cross-correlation degrades in a
+  way Stage 2 and 3 can't fully compensate. Stage 2 doesn't have this problem —
+  it operates after features are already matched.
+
+  What to run: three training runs — Stage 2 only, Stages 2+3, all three — same
+  epochs, same data split. My prediction is Stage 2 alone wins or ties on the
+  test set.
+
+  ---
+  2. Does this model use all 192 disparities?
+
+  Not quite — and this is an important architectural point.
+
+  The cost volume is built at 1/4 resolution with max_disp // 4 = 48 bins. Each
+  bin represents a 4-pixel step in disparity at full resolution, covering the
+  range 0–192. So the explicit search is 48 coarse bins, not 192 individual
+  values.
+
+  The RS Gaussian prior in Stage 2 operates over these same 48 bins:
+
+  d_idx        = torch.arange(D)          # 0 … 47
+  disp_prior_14 = disp_prior / 4.0        # convert to 1/4-scale units
+  prior_bias   = -0.5 * ((d_idx - disp_prior_14) / sigma)²
+
+  With sigma initialised at 4.0 (= 4 bins = 16 full-resolution pixels), the
+  prior is fairly broad. It's not pinning the network to a single disparity —
+  it's weighting a neighbourhood.
+
+  The GRU then refines continuously from the soft-argmax initialisation, so
+  sub-bin and sub-pixel accuracy is still reachable. The 48-bin cost volume just
+   determines where the GRU starts from.
+
+  The efficiency implication you might be heading toward
+
+  Because we have the RS prior, we could potentially build a much smaller cost
+  volume — say, only 16 bins centered around the RS-predicted disparity for each
+   pixel — rather than always computing all 48. That would cut cost-volume
+  memory and compute significantly, and Stage 2's Gaussian would collapse to a
+  much tighter prior over a smaller range.
+
+  The current implementation doesn't do this — it still builds the full 48-bin
+  volume and just biases the logits. That's leaving performance on the table:
+  you pay the full compute cost but don't use the RS prior to reduce the search
+  space, only to reweight it after the fact.
+
+  Is that the direction you were thinking?
+
+✻ Churned for 1m 17s

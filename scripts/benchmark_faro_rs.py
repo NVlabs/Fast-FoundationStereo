@@ -74,8 +74,8 @@ from report import ReportGenerator
 FARO_DIR       = r'/mnt/algonas/Local/Data/Stereo/Faro/FARO_DATA_BASE'
 ORIGINAL_PATH  = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
 FINETUNED_PATH = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen_epoch_006_epoch_013.pth'
-DEFAULT_OUT    = f'{code_dir}/../reports/benchmark_faro_rs_office'
-DATASET_KEYWORDS = ['OFFICE'] # ['OFFICE', 'KITCHEN']  # filter dataset paths containing any of these (case-insensitive)
+DEFAULT_OUT    = f'{code_dir}/../reports/benchmark_faro_rs_bathroom'
+DATASET_KEYWORDS = ['BATHROOM'] # ['OFFICE', 'KITCHEN']  # filter dataset paths containing any of these (case-insensitive)
 
 BF     = 49470.45   # focal_px × baseline_mm  (calibrated from RealSense stereo pair)
 ITERS  = 8          # GRU update iterations

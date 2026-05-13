@@ -619,7 +619,7 @@ class ChannelAttentionEnhancement(nn.Module):
 
     def forward(self, x):
         avg_out = self.fc(self.avg_pool(x))
-        max_out = self.fc(self.max_pool(x))
+        max_out = self.fc(torch.amax(x, dim=(-2, -1), keepdim=True))
         out = avg_out + max_out
         return self.sigmoid(out)
 

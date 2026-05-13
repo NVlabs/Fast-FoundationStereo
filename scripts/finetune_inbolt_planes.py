@@ -40,7 +40,7 @@ INBOLT_DIR   = r'/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datase
 # MODEL_PATH = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
 # OUT_PATH   = f'{code_dir}/../weights/20-30-48/model_finetuned_inbolt-20260415.pth'
 MODEL_PATH = f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth'
-OUT_PATH   = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt-20260415.pth'
+OUT_PATH   = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt_planes_25.pth'
 
 
 # BF         = 49.8624*385.73  # D435 - focal_px * baseline_mm (calibrated from camera)  # D435 - focal_px * baseline_mm (calibrated from camera)
@@ -52,12 +52,69 @@ GAMMA      = 0.9        # sequence loss weight decay
 TRAIN_RATIO = 0.75
 SPLIT_SEED  = 0
 
+# -- Helpers -------------------------------
+
+def measure_variability(img, levele_num = 2):
+    "estimate min and max values / std using 7x7 image kernel"
+
+    """
+    Finds the minimum and maximum values within the specified kernel size for each pixel in the image.
+
+    Args:
+        image: The input image as a NumPy array.
+        kernel_size: The size of the square kernel (e.g., 7 for a 7x7 kernel).
+
+    Returns:
+        A tuple containing:
+            - min_values: A NumPy array of the minimum values within each kernel.
+            - max_values: A NumPy array of the maximum values within each kernel.
+    """
+    img_size    = img.shape
+    for k in range(levele_num):
+        img         = cv2.pyrDown(img)
+        
+    img         = np.uint8(img)
+    kernel_size = 7
+
+    # Create a kernel of ones for min/max filtering
+    kernel      = np.ones((kernel_size, kernel_size), np.uint8) 
+
+    # Find minimum values within the kernel
+    min_values = cv2.erode(img, kernel)
+
+    # Find maximum values within the kernel
+    max_values = cv2.dilate(img, kernel)
+
+    # diference
+    max_diff   = cv2.absdiff(max_values , min_values)
+
+    # debug
+    # Display the results using Matplotlib
+    #self.show_image_plt(img, min_values, max_values, max_diff)
+    for k in range(levele_num):
+        max_diff    = cv2.pyrUp(max_diff)
+
+    max_diff    = cv2.resize(max_diff, img_size[::-1])
+
+    return max_diff.astype(np.float32)
+def find_flat_regions(disp_gt, valid):
+    """Identify planar regions in the ground-truth disparity map using RANSAC."""
+    # convert disp_gt to numpy for variability measurement
+    disp_gt_np         = disp_gt # (H, W)
+    valid_variability  = valid
+
+    # Fit a plane to the valid disparities using RANSAC
+    disp_variability  = measure_variability(disp_gt_np, levele_num=2)  # (H, W) variability measure (e.g., std or max-min)
+    valid_variability = valid_variability & (disp_variability < 50.0)  # only consider low-variability pixels             
+
+    return valid_variability
+
 
 # ── dataset ──────────────────────────────────────────────────────────────────
 
 class InboltDataset(Dataset):
-    def __init__(self, root):
-        self.source = DataSource()
+    def __init__(self, root,train_mode=True):
+        self.source = DataSource(train_mode=train_mode)
         n = self.source.init_directory(input_rectified=root)
         logging.info(f"DataSource found {n} samples in {root}")
 
@@ -86,6 +143,9 @@ class InboltDataset(Dataset):
         valid = depth > 0
         disp[valid] = BF / depth[valid]
 
+        #valid = find_flat_regions(disp, valid)
+        valid = find_flat_regions(depth, valid)
+
         left_t  = torch.from_numpy(left).permute(2, 0, 1).float()   # (3, H, W)
         right_t = torch.from_numpy(right).permute(2, 0, 1).float()  # (3, H, W)
         disp_t  = torch.from_numpy(disp).unsqueeze(0).float()       # (1, H, W)
@@ -95,6 +155,7 @@ class InboltDataset(Dataset):
 
 
 # ── loss ─────────────────────────────────────────────────────────────────────
+
 
 def sequence_loss(disp_preds, disp_gt, valid, gamma=GAMMA):
     """RAFT-style weighted sum of smooth-L1 losses over GRU iterations."""
@@ -167,7 +228,7 @@ def main():
     )
     scaler = torch.amp.GradScaler('cuda')
 
-    dataset = InboltDataset(INBOLT_DIR)
+    dataset = InboltDataset(INBOLT_DIR, train_mode=True)
     n_total = len(dataset)
 
     if n_total < 2:
@@ -194,6 +255,7 @@ def main():
         epoch_loss = 0.0
 
         for left, right, disp_gt, valid in train_loader:
+            #valid = find_flat_regions(disp_gt, valid)
             left, right = left.cuda(), right.cuda()
             disp_gt, valid = disp_gt.cuda(), valid.cuda()
 

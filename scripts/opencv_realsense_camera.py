@@ -122,7 +122,7 @@ class RealSense(object):
         #     dev                 = ctx.query_devices().front()
         #     safety_sensor       = dev.first_safety_sensor()
         #     safety_sensor.set_option(rs.option.safety_mode, rs.safety_mode.service)
-        self.intr             = self.get_camera_intrinsics(3) # depth intrinsics
+        #self.intr             = self.get_camera_intrinsics(3) # depth intrinsics
 
 
 
@@ -1019,5 +1019,5 @@ class RealSense(object):
 if __name__ == '__main__':
     cap = RealSense(frame_size=(1280,720))
     #cap = RealSense(frame_size=(640,360))
-    cap.test()
-    #cap.test_intrinsics()
+    #cap.test()
+    cap.test_intrinsics()

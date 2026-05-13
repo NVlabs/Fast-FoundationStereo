@@ -39,11 +39,14 @@ import unittest
 import logging as log
 import yaml
 
+# format logger
+log.basicConfig(format='[%(asctime)s] %(levelname)s: %(message)s', level=log.INFO)
+
 # --------------------------------
 
 CAMERA_MATRIX_RS = np.array([
-    [385.7338562011719, 0, 320.17578125],
-    [0, 385.7338562011719, 245.1015167236328],
+    [385.5098876953125, 0, 328.31732177734375],
+    [0, 385.5098876953125, 235.6382141113281],
     [0, 0, 1]
 ])
 
@@ -55,15 +58,30 @@ DIST_COEFFS_RS = np.array([
     -0.0
 ])
 
+CAMERA_MATRIX_ZIVID = np.array([
+    [1241.853637, 0, 609.9444419],
+    [0, 1241.853637, 513.6974808515621],
+    [0, 0, 1]
+])
+DIST_COEFFS_ZIVID = np.array([
+    - 0.04514386132359505,
+    - -0.03609563037753105,
+    - -6.156915333122015e-05,
+    - 0.00015102965699043125,
+    - -0.17297066748142242
+])
+
+
 
 
 # --------------------------------
 #%% Data source
 class DataSource:
 
-    def __init__(self):
+    def __init__(self, train_mode = True):
         self.gray_scale_input = False
         self.imgs = []   # list of dicts: {left, right, depth_zivid, rgb}
+        self.train_mode = train_mode
         log.info('Source is defined')
 
     def init_directory(self, input_rectified='', gray_scale_input=False, sub_indexes=None):
@@ -77,17 +95,27 @@ class DataSource:
         self.gray_scale_input = gray_scale_input
         self.imgs = []
 
-        IGNORED_SESSIONS = {'dataset_y16_freedrive', 'dataset_y8_freedrive'}
+        #IGNORED_SESSIONS = {'dataset_y16_freedrive', 'dataset_y8_freedrive'}
         #IGNORED_SESSIONS = {'dataset_y16_freedrive','dataset_depth_bias'}
+        IGNORED_SESSIONS = {'20260414_142239'}  # include all sessions by default; manually exclude any bad ones here
 
         # Each immediate sub-directory is a session
         try:
-            sessions = sorted([
-                os.path.join(input_rectified, d)
-                for d in os.listdir(input_rectified)
-                if os.path.isdir(os.path.join(input_rectified, d))
-                and d not in IGNORED_SESSIONS
-            ])
+            if self.train_mode:
+                sessions = sorted([
+                    os.path.join(input_rectified, d)
+                    for d in os.listdir(input_rectified)
+                    if os.path.isdir(os.path.join(input_rectified, d))
+                    and d not in IGNORED_SESSIONS
+                ])
+            else:
+                sessions = sorted([
+                    os.path.join(input_rectified, d)
+                    for d in os.listdir(input_rectified)
+                    if os.path.isdir(os.path.join(input_rectified, d))
+                    and d in IGNORED_SESSIONS
+                ])                
+
         except FileNotFoundError:
             log.error(f"Directory not found: {input_rectified}")
             return 0
@@ -234,10 +262,20 @@ class DataSource:
         if debug:
             img_list = [left_img, right_img, depth_rs, depth_zivid_projected]
             ttl_list = ['left (RS)', 'right (RS)', 'depth RS (mm)', 'depth Zivid (mm)']
-            if rgb_img.size > 0:
-                img_list.append(rgb_img)
-                ttl_list.append('rgb (Zivid)')
+            # if rgb_img.size > 0:
+            #     img_list.append(rgb_img)
+            #     ttl_list.append('rgb (Zivid)')
             self.show_subset(img_list, ttl_list)
+
+            # create point cloud  & save to ply point cloud for visualization
+            #XYZ = self.project_camera_to_3d(depth_zivid_projected, CAMERA_MATRIX_ZIVID, DIST_COEFFS_ZIVID)
+            XYZ = self.project_camera_to_3d(depth_zivid_projected, CAMERA_MATRIX_RS, DIST_COEFFS_RS)  # (N, 3) array of 3D points in Zivid camera space
+            zivid_path = entry['depth_zivid'].replace('.png', f'.ply')
+            #self.save_to_ply(XYZ/1000, zivid_path) # save in meters for visualization
+
+            XYZ = self.project_camera_to_3d(depth_rs, CAMERA_MATRIX_RS, DIST_COEFFS_RS)  # (N, 3) array of 3D points in RS camera space
+            rs_path = entry['depth_rs'].replace('.png', f'.ply')
+            #self.save_to_ply(XYZ/1000, rs_path) 
 
         return output_str    
 
@@ -304,6 +342,7 @@ class DataSource:
             f.write('end_header\n')
             for x, y, z in points:
                 f.write(f'{x} {y} {z}\n')
+        log.info(f"Saved point cloud to {filename}")
 
     def project_camera_to_3d(self, depth_img_mm: np.ndarray, cam_matrix: np.ndarray, dist_coeffs: np.ndarray) -> np.ndarray:
         """Project 2D pixel coordinates with depth to 3D points in camera space."""
@@ -368,14 +407,14 @@ class DataSource:
         # create 3D point cloud from zivid depth
         XYZ = self.project_camera_to_3d(depth_zivid_mm, CAMERA_MATRIX_ZIVID, DIST_COEFFS_ZIVID)  # (N, 3) array of 3D points in Zivid camera space
         # save to ply point cloud for visualization
-        #save_to_ply(XYZ/1000, f'zivid_original_points_{finx:03d}.ply') # save in meters for visualization
+        #self.save_to_ply(XYZ/1000, f'zivid_original_points_{finx:03d}.ply') # save in meters for visualization
 
         # project back on imaage RS
         depth_zivid_projected_mm = self.project_3d_to_camera(XYZ, CAMERA_MATRIX_RS, DIST_COEFFS_RS, frame_size = depth_rs_mm.shape)  # (H, W) depth map of Zivid points projected into RealSense pixel space
 
         XYZ_RS = self.project_camera_to_3d(depth_zivid_projected_mm, CAMERA_MATRIX_RS, DIST_COEFFS_RS)
-            # save to ply point cloud for visualization
-        #save_to_ply(XYZ_RS/1000, f'zivid_projected_points_{finx:03d}.ply') # save in meters for visualization
+        # save to ply point cloud for visualization
+        #self.save_to_ply(XYZ_RS/1000, f'zivid_projected_points_{finx:03d}.ply') # save in meters for visualization
 
         return depth_zivid_projected_mm    
     
@@ -407,11 +446,11 @@ class TestDataSource(unittest.TestCase):
 
     def test_show_images(self):
         p       = DataSource()
-        img_num = p.init_directory()
+        img_num = p.init_directory(r'C:\Work\Data\Depth\Data Collection-02')
         if img_num == 0:
             log.warning("No images found.")
             return
-        for k in np.random.randint(0, img_num, size=min(4, img_num)):
+        for k in np.random.randint(0, img_num, size=min(8, img_num)):
             out = p.get_item(int(k), debug=True)
             self.assertTrue(len(out["left"]) > 0)
             p.show_subset([out["left"], out["right"], out["depth_zivid"], out["depth_rs"], out["rgb"]],
@@ -421,12 +460,14 @@ class TestDataSource(unittest.TestCase):
 
     def test_get_item_projected(self):
         p       = DataSource()
-        img_num = p.init_directory(r'C:\Work\Data\Depth\Data Collection')
+        img_num = p.init_directory(r'C:\Work\Data\Depth\Data Collection-02')
         self.assertTrue(img_num > 0)
-        out = p.get_item_projected(5, debug=False)
-        err = p.compute_depth_error(out["depth_rs"], out["depth_zivid"])
-        self.assertTrue(len(out["left"]) > 0)
-        p.show_subset([out["left"], out["right"], out["depth_zivid"], out["depth_rs"], err],
+        #for k in np.random.randint(0, img_num, size=min(12, img_num)):
+        for k in range(0, img_num):
+            out = p.get_item_projected(int(k), debug=False)
+            err = p.compute_depth_error(out["depth_rs"], out["depth_zivid"])
+            self.assertTrue(len(out["left"]) > 0)
+            p.show_subset([out["left"], out["right"], out["depth_zivid"], out["depth_rs"], err],
                           ['left (RS)', 'right (RS)', 'depth Zivid (mm)', 'depth RS (mm)', 'error (mm)'])
         plt.show()
 
