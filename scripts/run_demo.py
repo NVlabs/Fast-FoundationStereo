@@ -23,6 +23,7 @@ import cv2
 if __name__=="__main__":
   code_dir = os.path.dirname(os.path.realpath(__file__))
   parser = argparse.ArgumentParser()
+
   parser.add_argument('--model_dir', default=f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth', type=str)
   # parser.add_argument('--left_file', default=f'{code_dir}/../data/mono/img0074.jpg', type=str)
   # parser.add_argument('--right_file', default=f'{code_dir}/../data/mono/img0076.jpg', type=str)  

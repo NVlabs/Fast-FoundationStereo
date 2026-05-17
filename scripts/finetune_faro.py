@@ -35,7 +35,7 @@ from faro_data_manager import DataSource
 
 FARO_DIR   = r'/mnt/algonas/Local/Data/Stereo/Faro/FARO_DATA_BASE'  # local path to the dataset
 MODEL_PATH = f'{code_dir}/../weights/20-30-48/model_best_bp2_serialize.pth'
-OUT_PATH   = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen_epoch_006.pth'
+OUT_PATH   = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_office.pth'
 #MODEL_PATH = f'{code_dir}/../weights/20-30-48/model_finetuned_faro_kitchen.pth'
 
 BF         = 49470.45   # focal_px * baseline_mm (calibrated from camera)
@@ -50,7 +50,7 @@ GAMMA      = 0.9        # sequence loss weight decay
 class FaroDataset(Dataset):
     def __init__(self, root):
         self.source = DataSource()
-        n = self.source.init_directory(input_rectified=root, test_keywords=['KITCHEN'], split='train')
+        n = self.source.init_directory(input_rectified=root, test_keywords=['OFFICE'], split='train')
         logging.info(f"DataSource found {n} samples in {root}")
 
     def __len__(self):
@@ -117,7 +117,7 @@ def main():
     total     = sum(p.numel() for p in model.parameters())
     logging.info(f"Trainable: {trainable:,} / {total:,} parameters")
 
-    model = torch.nn.DataParallel(model, device_ids=[0, 1])
+    model = torch.nn.DataParallel(model, device_ids=[0])
     model.cuda().train()
     logging.info("Using DataParallel on GPUs 0 and 1.")
 
@@ -131,7 +131,7 @@ def main():
 
     best_loss = float('inf')
 
-    for epoch in range(7,EPOCHS):
+    for epoch in range(0,EPOCHS):
         epoch_loss = 0.0
 
         for left, right, disp_gt, valid, idx in dataloader:
