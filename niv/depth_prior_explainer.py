@@ -18,7 +18,7 @@ the predicted depth map.
 import argparse
 import os
 import sys
-import cv2, matlib
+import cv2  #matlib
 #matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -34,7 +34,10 @@ if _FFS_ROOT not in sys.path:
     sys.path.insert(0, _FFS_ROOT)
 
 from niv.smart_lite.model import build_gwc_volume
-from niv.smart_lite.ablation.d1_models import build_d1_model    
+from niv.smart_lite.ablation.d1_models import build_d1_model  
+
+device_type     = "cuda" if torch.cuda.is_available() else "cpu"
+device          = torch.device(device_type)
 
 MODEL_H, MODEL_W = 384, 512
 
@@ -228,7 +231,7 @@ def main():
     p.add_argument("--output-dir", default = f'{_FFS_ROOT}/demo_data_out')
     args = p.parse_args()
 
-    device          = torch.device(args.device)
+    #device          = torch.device(args.device)
     model_path      = args.ffs_ckpt #or os.path.join(_FFS_ROOT, "weights", "weights_niv","model_best_bp2_serialize.pth")
     
     # Load model

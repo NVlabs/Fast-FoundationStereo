@@ -2,7 +2,7 @@ import socket
 import sys
 import cv2
 import numpy as np
-from core_niv.niv.image_server import send_msg, recv_msg
+from niv.image_server import send_msg, recv_msg
 
 
 class ImageClient:
