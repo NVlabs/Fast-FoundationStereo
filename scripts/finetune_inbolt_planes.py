@@ -97,6 +97,7 @@ def measure_variability(img, levele_num = 2):
     max_diff    = cv2.resize(max_diff, img_size[::-1])
 
     return max_diff.astype(np.float32)
+
 def find_flat_regions(disp_gt, valid):
     """Identify planar regions in the ground-truth disparity map using RANSAC."""
     # convert disp_gt to numpy for variability measurement

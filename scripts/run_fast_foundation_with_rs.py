@@ -38,7 +38,7 @@ from Utils import (
 )
 import cv2
 #from faro_data_manager import DataSource
-from faro_data_manager_laptop import DataSource
+from scripts.data_manager_faro_laptop import DataSource
 
 
 def process_arguments():
