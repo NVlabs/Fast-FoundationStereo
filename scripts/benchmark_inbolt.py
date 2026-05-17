@@ -430,6 +430,24 @@ def load_model(path: str):
     model.cuda().eval()
     return model
 
+@torch.no_grad()
+def infer_depth_nobf_m(model, left: np.ndarray, right: np.ndarray) -> np.ndarray:
+    """Run stereo inference on an IR pair that returns depth; return depth map in metres (H×W float32)."""
+    left_t, right_t = _preprocess_ir(left, right)
+    padder = InputPadder(left_t.shape, divis_by=32, force_square=False)
+    left_t, right_t = padder.pad(left_t, right_t)
+
+    with torch.amp.autocast('cuda', enabled=True, dtype=U.AMP_DTYPE):
+        depth = model.forward(left_t, right_t, iters=ITERS, test_mode=True)
+
+    depth = padder.unpad(depth.float())
+    depth_np = depth.cpu().numpy().reshape(left.shape[:2]).clip(0, None)
+
+    depth_m = np.zeros_like(depth_np)
+    valid = depth_np > 0
+    depth_m[valid] = depth_np[valid] / 1000.0   # mm → m
+    return depth_m
+
 
 # ── inbolt graphs ─────────────────────────────────────────────────────────────────────
 
