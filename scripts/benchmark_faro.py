@@ -24,7 +24,7 @@ import torch
 
 from core.utils.utils import InputPadder
 import Utils as U
-from faro_data_manager import DataSource
+from scripts.data_manager_faro import DataSource
 from metrics import (
     BenchmarkResults,
     FrameMetrics,
