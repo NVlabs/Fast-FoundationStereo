@@ -34,7 +34,7 @@ _FFS_ROOT = os.path.abspath(os.path.join(_HERE, '..', '..'))
 if _FFS_ROOT not in sys.path:
     sys.path.insert(0, _FFS_ROOT)
 
-from core_niv.niv.smart_lite.model import (
+from niv.smart_lite.model import (
     SmartLiteStereo, build_gwc_volume, MODEL_CONFIGS,
     DepthwiseSeparableConv2d, DepthwiseSeparableConvGRU,
     MotionEncoder,

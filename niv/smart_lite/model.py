@@ -232,7 +232,7 @@ class ContextNet(nn.Module):
         x = x * self.cam(x)
         x = self.conv2(x)
         sa = self.sam(torch.cat([x.mean(1, keepdim=True), x.amax(1, keepdim=True)], dim=1))
-        x = x * sa
+        x = x * sa # (1,128,H/4,W/4)
         out  = self.proj(x)
         net0 = torch.tanh(out[:, :self.hidden_dim])
         inp0 = torch.relu(out[:, self.hidden_dim:self.hidden_dim + self.context_dim])
