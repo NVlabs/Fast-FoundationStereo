@@ -5,7 +5,7 @@ import unittest
 import socketserver
 import cv2
 import numpy as np
-from core_niv.niv.image_server import send_msg, recv_msg, ImageHandler
+from niv.image_server import send_msg, recv_msg, ImageHandler
 
 _TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 _FIXTURE_LEFT = os.path.join(_TEST_DIR, 'sample', 'left.png')
@@ -120,14 +120,14 @@ class TestImageClient(unittest.TestCase):
         cls.thread.join(timeout=2)
 
     def test_client_process_returns_grayscale(self):
-        from core_niv.niv.image_client import ImageClient
+        from niv.image_client import ImageClient
         img = np.random.randint(0, 256, (80, 80, 3), dtype=np.uint8)
         with ImageClient('127.0.0.1', self.port) as client:
             gray = client.process(img)
         self.assertEqual(gray.shape, (80, 80))
 
     def test_client_process_multiple_images(self):
-        from core_niv.niv.image_client import ImageClient
+        from niv.image_client import ImageClient
         with ImageClient('127.0.0.1', self.port) as client:
             for size in [32, 64, 128]:
                 img = np.random.randint(0, 256, (size, size, 3), dtype=np.uint8)
@@ -160,7 +160,7 @@ class TestImageClientWebcam(unittest.TestCase):
         cls.thread.join(timeout=2)
 
     def test_webcam_roundtrip_display(self):
-        from core_niv.niv.image_client import ImageClient
+        from niv.image_client import ImageClient
         cam_index = int(os.environ.get('NIV_WEBCAM_INDEX', '0'))
         cap = cv2.VideoCapture(cam_index)
         if not cap.isOpened():
