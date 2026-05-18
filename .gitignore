@@ -1,6 +1,6 @@
 __pycache__
 *.vscode
-cfg.yaml
+cfg.yam
 *.pth
 *.pkl
 *.pyc
