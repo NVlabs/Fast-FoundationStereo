@@ -168,7 +168,7 @@ ORIGINAL_PATH  = f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth'
 # MODEL_PATH      = f'{code_dir}/../weights/23-36-37/model_best_bp2_serialize.pth'
 #FINETUNED_PATH  = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt-20260415_epoch_111.pth'
 #DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark-model37-111-set-20260414_142239'
-FINETUNED_PATH  = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt_planes_bf_epoch_018.pth'
+FINETUNED_PATH  = f'{code_dir}/../weights/23-36-37/model_finetuned_inbolt_planes_bf_epoch_093.pth'
 DEFAULT_OUT     = f'{code_dir}/../reports/inbolt_ffs_benchmark_planes_bf'
 N_VIZ = 5
 

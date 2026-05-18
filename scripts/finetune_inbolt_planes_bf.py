@@ -142,9 +142,9 @@ class InboltDataset(Dataset):
         right = np.stack([right, right, right], axis=-1)
 
         # depth (mm) → disparity (pixels):  disp = focal * baseline / depth
-        disp  = np.zeros_like(depth, dtype=np.float32)
+        #disp  = np.zeros_like(depth, dtype=np.float32)
         valid = depth > 0
-        disp[valid] = BF / depth[valid]
+        #disp[valid] = BF / depth[valid]
 
         #valid = find_flat_regions(disp, valid)
         valid = find_flat_regions(depth, valid)
@@ -216,10 +216,11 @@ class DepthHead(nn.Module):
         super().__init__()
         self.register_buffer('bf', torch.tensor(float(bf)))
         self.weight = nn.Parameter(torch.zeros(1))
-        self.eps = eps
+        self.eps = 1
 
     def forward(self, disparity: torch.Tensor) -> torch.Tensor:
-        return (self.bf + self.weight) / disparity.clamp(min=self.eps)
+        #return (self.bf + self.weight) / disparity.clamp(min=self.eps)
+        return (self.bf) / disparity.clamp(min=self.eps)
 
 
 # ── model wrapper ─────────────────────────────────────────────────────────────
