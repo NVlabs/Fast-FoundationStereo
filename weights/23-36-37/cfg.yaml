@@ -1,0 +1,12 @@
+corr_levels: 2
+corr_radius: 4
+hidden_dims:
+- 128
+low_memory: 0
+max_disp: 416
+mixed_precision: true
+n_downsample: 2
+n_gru_layers: 1
+slow_fast_gru: false
+valid_iters: 8
+vit_size: vitl
