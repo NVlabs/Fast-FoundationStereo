@@ -16,3 +16,4 @@ data/mono/*
 data/pattern_cube/*
 reports/*
 
+*.bak

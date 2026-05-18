@@ -137,8 +137,7 @@ def annotated_forward(model, left_t, right_t, rs_disp_t, conf_t, num_iters=8):
         # Feature extraction and cost volume (no prior here)
         feat_left, feat_right = model._extract(left_t, right_t)
         
-        gwc_volume = build_gwc_volume(feat_left, feat_right,
-                                      model.max_disp_q4, model.num_groups)
+        gwc_volume = build_gwc_volume(feat_left, feat_right,  model.max_disp_q4, model.num_groups)
 
         # Downsample prior to GRU resolution (1/4), scale disparity accordingly
         rs_q4   = F.interpolate(rs_disp_t, (Hq, Wq), mode='bilinear', align_corners=False) * 0.25
