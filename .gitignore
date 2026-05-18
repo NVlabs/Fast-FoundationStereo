@@ -1,6 +1,6 @@
 __pycache__
 *.vscode
-cfg.yaml
+cfg.yam
 *.pth
 *.pkl
 *.pyc
@@ -9,7 +9,6 @@ cfg.yaml
 g.txt
 # Ignore weight files but keep the folder structure
 weights/*
-!weights/.gitkeep
 output/
 .claude/
 *.ply
