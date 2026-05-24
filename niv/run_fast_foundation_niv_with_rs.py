@@ -202,20 +202,29 @@ def depth_fs_rs_error(depth_rs, depth_fs):
 
     return depth_error
 
-def preprocess(frame, scale_factor = 0.5):
-    "convert and downscale"
+def preprocess(frame, scale_factor = 0.5, crop_size=(512, 384)):
+    "convert and downscale, then center-crop to crop_size (W, H)"
     frame           = frame.astype(np.float32)
 
     # assign
     imgL            = frame[:,:,0]
     imgR            = frame[:,:,1]
-    imgD            = frame[:,:,2] 
-        
+    imgD            = frame[:,:,2]
+
     # if scale_factor < 0.9:
 
     #     imgL           = cv2.resize(imgL, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_LINEAR)
     #     imgR           = cv2.resize(imgR, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_LINEAR)
     #     imgD           = cv2.resize(imgD, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_NEAREST)
+
+    # center crop
+    crop_w, crop_h  = crop_size
+    H, W            = imgL.shape[:2]
+    y0              = (H - crop_h) // 2
+    x0              = (W - crop_w) // 2
+    imgL            = imgL[y0:y0+crop_h, x0:x0+crop_w]
+    imgR            = imgR[y0:y0+crop_h, x0:x0+crop_w]
+    imgD            = imgD[y0:y0+crop_h, x0:x0+crop_w]
 
     return imgL, imgR, imgD
 

@@ -678,10 +678,10 @@ def test_video_stream_rs_fs_merge():
         ret4 = show_images_depth(img_left.astype(np.uint8), img_right.astype(np.uint8), fig_name='Images L-R')
         ret = ret1 or ret2 or ret3 or ret4
 
-        d.save_image(img_depth_rs,fname='depth_rs')
-        d.save_image(img_depth_fs,fname='depth_fs')
-        d.save_image(img_left,fname='img_left')
-        d.save_image(img_right,fname='img_right')
+        # d.save_image(img_depth_rs,fname='depth_rs')
+        # d.save_image(img_depth_fs,fname='depth_fs')
+        # d.save_image(img_left,fname='img_left')
+        # d.save_image(img_right,fname='img_right')
         # plt.show()
         
     d.release()
