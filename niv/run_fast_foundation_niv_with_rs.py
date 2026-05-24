@@ -209,7 +209,7 @@ def preprocess(frame, scale_factor = 0.5):
     # assign
     imgL            = frame[:,:,0]
     imgR            = frame[:,:,1]
-    imgD            = frame[:,:,2] * 0
+    imgD            = frame[:,:,2] 
         
     # if scale_factor < 0.9:
 
