@@ -1,0 +1,64 @@
+{
+  "source": "INBOLT dataset (/mnt/algonas/Local/Data/new_depth_stereo_datasets/Inbolt_datasets/Data Collection-20260322T091926Z-1-001/Data Collection)",
+  "n_frames": 18,
+  "resolution": "640x480",
+  "ground_truth": "inbolt_gt",
+  "distance_bins": [
+    "0\u20131 m",
+    "1\u20132 m",
+    "2\u20133 m",
+    "3\u20135 m"
+  ],
+  "model_configs": {
+    "original": {
+      "model_path": "/home/adiroha/repos/Fast-FoundationStereo/scripts/../weights/20-30-48/model_best_bp2_serialize.pth"
+    },
+    "finetuned": {
+      "model_path": "/home/adiroha/repos/Fast-FoundationStereo/scripts/../weights/20-30-48/model_finetuned_inbolt.pth"
+    }
+  },
+  "methods": {
+    "inbolt_gt": {
+      "label": "INBOLT GT",
+      "mae_mean": 0.0,
+      "mae_std": 0.0,
+      "rmse_mean": 0.0,
+      "mre_mean": 0.0,
+      "delta1_mean": 100.0,
+      "coverage_mean": 82.82678674768518,
+      "fps_mean": -1,
+      "time_ms_mean": 0.0,
+      "close_range_coverage": 11.11111111111111,
+      "gpu_load_mean": 0.0,
+      "is_ground_truth": true
+    },
+    "finetuned": {
+      "label": "Fine-tuned on INBOLT",
+      "mae_mean": 1.6766890618536208,
+      "mae_std": 0.5363837577208318,
+      "rmse_mean": 1.706638468636407,
+      "mre_mean": 1.5533304479387071,
+      "delta1_mean": 0.0,
+      "coverage_mean": 82.82678674768518,
+      "fps_mean": 5.817052135797856,
+      "time_ms_mean": 171.9083784458538,
+      "close_range_coverage": 11.11111111111111,
+      "gpu_load_mean": 0.0,
+      "is_ground_truth": false
+    },
+    "original": {
+      "label": "Original model",
+      "mae_mean": 2.0390112466282315,
+      "mae_std": 0.5198313899331768,
+      "rmse_mean": 2.0891922778553433,
+      "mre_mean": 1.9439863959948223,
+      "delta1_mean": 0.0,
+      "coverage_mean": 82.82678674768518,
+      "fps_mean": 21.39207336477468,
+      "time_ms_mean": 46.74628695162634,
+      "close_range_coverage": 11.11111111111111,
+      "gpu_load_mean": 0.0,
+      "is_ground_truth": false
+    }
+  }
+}

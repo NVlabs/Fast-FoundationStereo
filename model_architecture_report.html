@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FastFoundationStereo — Architecture Report</title>
+  <style>
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --surface2: #22263a;
+      --border:   #2e3450;
+      --accent:   #4f7cff;
+      --accent2:  #7c4fff;
+      --green:    #3ecf8e;
+      --yellow:   #f5a623;
+      --red:      #ff5c5c;
+      --text:     #e2e8f0;
+      --muted:    #8892a4;
+      --code-bg:  #111827;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1a1d27 0%, #0d1b4b 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 40px 36px;
+    }
+    header h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #6ab0ff, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header .subtitle {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+    .badges {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid;
+    }
+    .badge-blue  { background: #1e3a8a22; border-color: #3b82f6; color: #93c5fd; }
+    .badge-green { background: #06402022; border-color: #22c55e; color: #86efac; }
+    .badge-purple{ background: #4c1d9522; border-color: #a78bfa; color: #c4b5fd; }
+
+    /* ── Layout ── */
+    main { max-width: 1100px; margin: 0 auto; padding: 40px 32px 80px; }
+
+    /* ── Section headings ── */
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 48px 0 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title .icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+
+    /* ── Pipeline diagram ── */
+    .pipeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .pipe-step {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+    }
+    .pipe-connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 48px;
+      flex-shrink: 0;
+    }
+    .pipe-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+      flex-shrink: 0;
+      margin-top: 22px;
+    }
+    .pipe-line {
+      width: 2px;
+      background: linear-gradient(to bottom, var(--accent), var(--accent2));
+      flex: 1;
+      min-height: 20px;
+    }
+    .pipe-line.last { background: transparent; }
+    .pipe-card {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin: 6px 0;
+      transition: border-color 0.2s;
+    }
+    .pipe-card:hover { border-color: var(--accent); }
+    .pipe-card.highlight { border-color: var(--red); background: #1a0f0f; }
+    .pipe-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .pipe-num {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .pipe-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 2px;
+    }
+    .pipe-file {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      background: var(--code-bg);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .pipe-desc {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-top: 10px;
+    }
+    .pipe-shapes {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .shape-tag {
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.78rem;
+      padding: 3px 10px;
+      border-radius: 6px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      color: #7dd3fc;
+    }
+    .arrow-tag { color: var(--muted); font-size: 0.85rem; }
+    .pipe-cost {
+      margin-top: 14px;
+    }
+    .cost-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    .cost-bar-wrap {
+      background: var(--code-bg);
+      border-radius: 6px;
+      height: 8px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .cost-bar {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 1s ease;
+    }
+    .cost-pct {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .cost-high   { background: linear-gradient(90deg, #ef4444, #f97316); }
+    .cost-med    { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .cost-low    { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .cost-tiny   { background: linear-gradient(90deg, #6b7280, #9ca3af); }
+
+    /* ── Sub-blocks inside a card ── */
+    .sub-blocks {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .sub-block {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--code-bg);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.83rem;
+    }
+    .sub-block-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+    .sub-block-text { color: var(--muted); line-height: 1.5; }
+    .sub-block-text strong { color: var(--text); }
+
+    /* ── Hourglass diagram ── */
+    .hourglass-diagram {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: #a5b4fc;
+      line-height: 1.8;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    /* ── Performance table ── */
+    .perf-table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    thead tr {
+      background: var(--surface2);
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    th { padding: 10px 16px; text-align: left; font-weight: 600; }
+    td { padding: 11px 16px; border-top: 1px solid var(--border); vertical-align: middle; }
+    tr:hover td { background: var(--surface2); }
+    .rank-1 td:first-child { color: var(--red); font-weight: 700; }
+    .rank-2 td:first-child { color: var(--yellow); font-weight: 700; }
+    .rank-3 td:first-child { color: #60a5fa; font-weight: 700; }
+    .mini-bar-wrap {
+      width: 120px;
+      background: var(--code-bg);
+      border-radius: 4px;
+      height: 7px;
+      overflow: hidden;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .mini-bar { height: 100%; border-radius: 4px; }
+
+    /* ── Info box ── */
+    .info-box {
+      background: #0d2040;
+      border: 1px solid #1d4ed8;
+      border-left: 4px solid #3b82f6;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 24px 0;
+      font-size: 0.9rem;
+    }
+    .warn-box {
+      background: #1a0f00;
+      border: 1px solid #92400e;
+      border-left: 4px solid var(--yellow);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 24px 0;
+      font-size: 0.9rem;
+    }
+    .warn-box .warn-title, .info-box .info-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+    }
+    .warn-box .warn-title { color: var(--yellow); }
+    .info-box .info-title { color: #60a5fa; }
+
+    /* ── Param count grid ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin: 20px 0;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      text-align: center;
+    }
+    .stat-val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 40px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-align: center;
+    }
+
+    code {
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      background: var(--code-bg);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      color: #7dd3fc;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>FastFoundationStereo</h1>
+  <div class="subtitle">Neural Network Architecture &amp; Processing Cost Report</div>
+  <div class="badges">
+    <span class="badge badge-blue">Stereo Depth Estimation</span>
+    <span class="badge badge-green">EdgeNeXt Backbone</span>
+    <span class="badge badge-purple">GRU Iterative Refinement</span>
+    <span class="badge badge-blue">3D Cost Aggregation</span>
+    <span class="badge badge-purple">Transformer Attention</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- Overview stats -->
+  <div class="section-title">
+    <div class="icon">📊</div>
+    Model Overview
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-val">~23M</div>
+      <div class="stat-label">Total Parameters</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">480×640</div>
+      <div class="stat-label">Typical Input Resolution</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">192</div>
+      <div class="stat-label">Max Disparity (pixels)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">8–12</div>
+      <div class="stat-label">GRU Refinement Iterations</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">1/4</div>
+      <div class="stat-label">Internal Resolution Scale</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val">fp16</div>
+      <div class="stat-label">AMP Inference Dtype</div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="info-title">🔁 Pipeline Summary</div>
+    FastFoundationStereo follows a classic stereo matching flow: <strong>feature extraction → cost volume → cost aggregation → iterative GRU refinement → upsampling</strong>.
+    The key design choices are a <em>3D hourglass</em> with per-scale image feature guidance for cost aggregation, and a <em>Selective ConvGRU</em> that blends small and large receptive fields based on a spatial attention map.
+  </div>
+
+  <!-- Pipeline -->
+  <div class="section-title">
+    <div class="icon">⛓</div>
+    Block-by-Block Pipeline
+  </div>
+
+  <div class="pipeline">
+
+    <!-- Block 1 -->
+    <div class="pipe-step">
+      <div class="pipe-connector">
+        <div class="pipe-dot"></div>
+        <div class="pipe-line"></div>
+      </div>
+      <div class="pipe-card">
+        <div class="pipe-header">
+          <div>
+            <div class="pipe-num">Block 1</div>
+            <div class="pipe-name">Feature Extraction</div>
+          </div>
+          <span class="pipe-file">core/extractor.py · Feature</span>
+        </div>
+        <div class="pipe-shapes">
+          <span class="shape-tag">2 × (B, 3, H, W)</span>
+          <span class="arrow-tag">→</span>
+          <span class="shape-tag">(B, 128, H/4, W/4)</span>
+          <span class="shape-tag">(B, 192, H/8, W/8)</span>
+          <span class="shape-tag">(B, 320, H/16, W/16)</span>
+          <span class="shape-tag">(B, 304, H/32, W/32)</span>
+        </div>
+        <div class="sub-blocks">
+          <div class="sub-block">
+            <span class="sub-block-icon">🧠</span>
+            <span class="sub-block-text"><strong>EdgeNeXt-small backbone (pretrained)</strong> — 4-stage hierarchical encoder producing multi-scale features at strides 4, 8, 16, 32. Channel widths: 48 → 96 → 160 → 304.</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">🔺</span>
+            <span class="sub-block-text"><strong>FPN-style deconvolution</strong> — deconv32→16, deconv16→8, deconv8→4 with lateral skip connections. Final Conv1×1 projects to 128ch at stride-4 (includes ViT feature dim offset).</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">⚡</span>
+            <span class="sub-block-text"><strong>Efficiency trick</strong> — left and right images concatenated into one batch <code>(2B, 3, H, W)</code> for a single forward pass through the shared backbone, then split.</span>
+          </div>
+        </div>
+        <div class="pipe-cost">
+          <div class="cost-label">Estimated compute share</div>
+          <div class="cost-bar-wrap"><div class="cost-bar cost-med" style="width:13%"></div></div>
+          <div class="cost-pct">~10–15%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 2 -->
+    <div class="pipe-step">
+      <div class="pipe-connector">
+        <div class="pipe-dot"></div>
+        <div class="pipe-line"></div>
+      </div>
+      <div class="pipe-card">
+        <div class="pipe-header">
+          <div>
+            <div class="pipe-num">Block 2</div>
+            <div class="pipe-name">Cost Volume Construction</div>
+          </div>
+          <span class="pipe-file">core/submodule.py · build_gwc / build_concat</span>
+        </div>
+        <div class="pipe-shapes">
+          <span class="shape-tag">(B, 128, H/4, W/4) × 2</span>
+          <span class="arrow-tag">→</span>
+          <span class="shape-tag">(B, 32, D/4, H/4, W/4)</span>
+        </div>
+        <div class="sub-blocks">
+          <div class="sub-block">
+            <span class="sub-block-icon">📐</span>
+            <span class="sub-block-text"><strong>GWC Volume</strong> (Group-wise Correlation) — features split into 8 groups, dot-product correlation for every disparity shift <code>d=0..D/4-1</code>. Shape: <code>(B, 8, D/4, H/4, W/4)</code>. Optimised via PyTorch1 or Triton kernel.</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">🧩</span>
+            <span class="sub-block-text"><strong>Concat Volume</strong> — <code>proj_cmb</code> (Conv1×1: 128→12ch) projects each side, then left/right feature pairs concatenated for each shift. Shape: <code>(B, 24, D/4, H/4, W/4)</code>.</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">🔗</span>
+            <span class="sub-block-text"><strong>Combined</strong> — channel-wise cat → <code>(B, 32, 48, H/4, W/4)</code>. At 480×640 this tensor holds ~88M values — the single largest allocation.</span>
+          </div>
+        </div>
+        <div class="pipe-cost">
+          <div class="cost-label">Estimated compute share</div>
+          <div class="cost-bar-wrap"><div class="cost-bar cost-med" style="width:13%"></div></div>
+          <div class="cost-pct">~10–15%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 3 -->
+    <div class="pipe-step">
+      <div class="pipe-connector">
+        <div class="pipe-dot"></div>
+        <div class="pipe-line"></div>
+      </div>
+      <div class="pipe-card">
+        <div class="pipe-header">
+          <div>
+            <div class="pipe-num">Block 3</div>
+            <div class="pipe-name">Cost Volume Stem</div>
+          </div>
+          <span class="pipe-file">core/foundation_stereo.py · corr_stem + corr_feature_att</span>
+        </div>
+        <div class="pipe-shapes">
+          <span class="shape-tag">(B, 32, 48, H/4, W/4)</span>
+          <span class="arrow-tag">→</span>
+          <span class="shape-tag">(B, 28, 48, H/4, W/4)</span>
+        </div>
+        <div class="sub-blocks">
+          <div class="sub-block">
+            <span class="sub-block-icon">🔧</span>
+            <span class="sub-block-text"><strong>corr_stem</strong> — Conv3d 1×1: 32→28ch, then BasicConv 3D 3×3×3, then 2 × ResnetBasicBlock3D (28ch). Projects and refines the raw cost volume.</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">👁</span>
+            <span class="sub-block-text"><strong>FeatureAtt</strong> — squeeze-excite style: global-avg-pool the 2D image features (128ch), FC → scale factors applied to cost volume channels. Modulates cost volume by image content at stride-4.</span>
+          </div>
+        </div>
+        <div class="pipe-cost">
+          <div class="cost-label">Estimated compute share</div>
+          <div class="cost-bar-wrap"><div class="cost-bar cost-low" style="width:3%"></div></div>
+          <div class="cost-pct">~3%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 4 — HIGHLIGHT -->
+    <div class="pipe-step">
+      <div class="pipe-connector">
+        <div class="pipe-dot" style="background:var(--red);"></div>
+        <div class="pipe-line"></div>
+      </div>
+      <div class="pipe-card highlight">
+        <div class="pipe-header">
+          <div>
+            <div class="pipe-num">Block 4 — ⚠ Bottleneck</div>
+            <div class="pipe-name">Hourglass Cost Aggregation</div>
+          </div>
+          <span class="pipe-file">core/foundation_stereo.py · hourglass</span>
+        </div>
+        <div class="pipe-shapes">
+          <span class="shape-tag">(B, 28, 48, H/4, W/4)</span>
+          <span class="arrow-tag">→</span>
+          <span class="shape-tag">(B, 28, 48, H/4, W/4)</span>
+        </div>
+        <div class="hourglass-diagram">
+ Input  (28ch, D/4, H/4, W/4)
+   │
+   ├─[Encoder]──────────────────────────────────────────────
+   │  conv1: stride-2 3D + Conv3dNormActReduced  →  56ch  D/8  H/8  W/8
+   │    └─ FeatureAtt_8  (guided by x8 img feats, 192ch)
+   │  conv2: stride-2 3D + Conv3dNormActReduced  →  112ch D/16 H/16 W/16
+   │    └─ FeatureAtt_16 (guided by x16 img feats, 320ch)
+   │  conv3: stride-2 3D + Conv3dNormActReduced  →  168ch D/32 H/32 W/32
+   │    └─ FeatureAtt_32 (guided by x32 img feats, 304ch)
+   │
+   ├─[Bottleneck Attention]─────────────────────────────────
+   │  conv_patch: 4×4×4 strided → (28ch, D/64, H/64, W/64)
+   │  CostVolumeDisparityAttention:
+   │    4-head Transformer × 4 layers  (in disparity dimension)
+   │    + sinusoidal positional embeddings
+   │  interpolate ×4 → (28ch, D/4, H/4, W/4)  [residual add]
+   │
+   ├─[Decoder]──────────────────────────────────────────────
+   │  conv3_up: deconv  →  112ch
+   │    cat with enc skip → 224ch → agg_0 (2×Conv3dNormActReduced) → 112ch
+   │    └─ FeatureAtt_up_16
+   │  conv2_up: deconv  →  56ch
+   │    cat with enc skip → 112ch → agg_1 (2×Conv3dNormActReduced) → 56ch
+   │    └─ FeatureAtt_up_8
+   │  conv1_up: deconv  →  28ch
+   │    + bottleneck residual
+   │  conv_out: 2×Conv3dNormActReduced → 28ch
+   │
+ Output (28ch, D/4, H/4, W/4)</div>
+        <div class="pipe-cost">
+          <div class="cost-label">Estimated compute share</div>
+          <div class="cost-bar-wrap"><div class="cost-bar cost-high" style="width:55%"></div></div>
+          <div class="cost-pct">~50–60% — dominant bottleneck due to 3D conv over 4D volume at multiple scales</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 5 -->
+    <div class="pipe-step">
+      <div class="pipe-connector">
+        <div class="pipe-dot"></div>
+        <div class="pipe-line"></div>
+      </div>
+      <div class="pipe-card">
+        <div class="pipe-header">
+          <div>
+            <div class="pipe-num">Block 5</div>
+            <div class="pipe-name">Classifier + Initial Disparity</div>
+          </div>
+          <span class="pipe-file">core/foundation_stereo.py · classifier</span>
+        </div>
+        <div class="pipe-shapes">
+          <span class="shape-tag">(B, 28, 48, H/4, W/4)</span>
+          <span class="arrow-tag">→</span>
+          <span class="shape-tag">(B, 1, H/4, W/4)</span>
+        </div>
+        <div class="sub-blocks">
+          <div class="sub-block">
+            <span class="sub-block-icon">🎯</span>
+            <span class="sub-block-text"><strong>Classifier</strong> — BasicConv 3D: 28→14ch, ResnetBasicBlock3D, Conv3d 7×7×7: 14→1ch → logits <code>(B, 48, H/4, W/4)</code>.</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">📉</span>
+            <span class="sub-block-text"><strong>Soft-argmax</strong> — softmax over disparity dim, weighted sum <code>Σ p(d) · d</code> → smooth initial disparity estimate (used as seed for GRU iterations).</span>
+          </div>
+        </div>
+        <div class="pipe-cost">
+          <div class="cost-label">Estimated compute share</div>
+          <div class="cost-bar-wrap"><div class="cost-bar cost-low" style="width:2%"></div></div>
+          <div class="cost-pct">~2%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 6 -->
+    <div class="pipe-step">
+      <div class="pipe-connector">
+        <div class="pipe-dot"></div>
+        <div class="pipe-line"></div>
+      </div>
+      <div class="pipe-card">
+        <div class="pipe-header">
+          <div>
+            <div class="pipe-num">Block 6</div>
+            <div class="pipe-name">Context Network + Attention</div>
+          </div>
+          <span class="pipe-file">core/extractor.py · ContextNetSharedBackbone</span>
+        </div>
+        <div class="pipe-shapes">
+          <span class="shape-tag">(B, 128, H/4, W/4)</span>
+          <span class="arrow-tag">→</span>
+          <span class="shape-tag">net (128ch) + inp (128ch)</span>
+        </div>
+        <div class="sub-blocks">
+          <div class="sub-block">
+            <span class="sub-block-icon">🧵</span>
+            <span class="sub-block-text"><strong>ContextNet</strong> — two parallel Conv2d 3×3 projections on <code>x4</code>: one for hidden state <code>net</code> (tanh), one for context <code>inp</code> (ReLU). Uses the same left features already computed in Block 1.</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">🔍</span>
+            <span class="sub-block-text"><strong>CAM</strong> (Channel Attention Enhancement) — squeeze-excite on <code>inp</code>. <strong>SAM</strong> (Spatial Attention Extractor) — produces spatial attention map used by SelectiveConvGRU. Both are very lightweight.</span>
+          </div>
+        </div>
+        <div class="pipe-cost">
+          <div class="cost-label">Estimated compute share</div>
+          <div class="cost-bar-wrap"><div class="cost-bar cost-tiny" style="width:1%"></div></div>
+          <div class="cost-pct">~1%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 7 -->
+    <div class="pipe-step">
+      <div class="pipe-connector">
+        <div class="pipe-dot"></div>
+        <div class="pipe-line"></div>
+      </div>
+      <div class="pipe-card">
+        <div class="pipe-header">
+          <div>
+            <div class="pipe-num">Block 7</div>
+            <div class="pipe-name">Geometry Encoding Volume</div>
+          </div>
+          <span class="pipe-file">core/geometry.py · Combined_Geo_Encoding_Volume</span>
+        </div>
+        <div class="pipe-shapes">
+          <span class="shape-tag">features_left/right[0] + cost vol</span>
+          <span class="arrow-tag">→</span>
+          <span class="shape-tag">2-level pyramid (sampled per iter)</span>
+        </div>
+        <div class="sub-blocks">
+          <div class="sub-block">
+            <span class="sub-block-icon">🗺</span>
+            <span class="sub-block-text"><strong>Full correlation map</strong> — einsum dot-product between all left×right feature positions: <code>(B, H/4, W/4, 1, W/4)</code>. Normalised L2. Built once.</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">🔭</span>
+            <span class="sub-block-text"><strong>2-level pyramid</strong> — cost volume and correlation map both avg-pooled in disparity dim × 2 for coarse/fine sampling. At each GRU iter, 1D bilinear sampling at <code>disp ± corr_radius=4</code> → 9 samples × 2 levels × 2 sources = feature vector.</span>
+          </div>
+        </div>
+        <div class="pipe-cost">
+          <div class="cost-label">Estimated compute share (init + 8 lookups)</div>
+          <div class="cost-bar-wrap"><div class="cost-bar cost-low" style="width:7%"></div></div>
+          <div class="cost-pct">~5–8%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 8 -->
+    <div class="pipe-step">
+      <div class="pipe-connector">
+        <div class="pipe-dot" style="background:var(--yellow);"></div>
+        <div class="pipe-line"></div>
+      </div>
+      <div class="pipe-card">
+        <div class="pipe-header">
+          <div>
+            <div class="pipe-num">Block 8 — Iterative (×8 default)</div>
+            <div class="pipe-name">Selective GRU Update Block</div>
+          </div>
+          <span class="pipe-file">core/update.py · BasicSelectiveMultiUpdateBlock</span>
+        </div>
+        <div class="pipe-shapes">
+          <span class="shape-tag">net (128ch) + inp (128ch) + geo_feat</span>
+          <span class="arrow-tag">→</span>
+          <span class="shape-tag">Δdisp (1ch) + mask (32ch)</span>
+        </div>
+        <div class="sub-blocks">
+          <div class="sub-block">
+            <span class="sub-block-icon">🏃</span>
+            <span class="sub-block-text"><strong>BasicMotionEncoder</strong> — corr branch: Conv2d 1×1 + 3×3 → 256ch. Disp branch: Conv2d 7×7 + 3×3 → 64ch. Fuse: Conv2d 1×1 → 127ch + concat raw disp = 128ch motion features.</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">🔀</span>
+            <span class="sub-block-text"><strong>SelectiveConvGRU</strong> — blends two ConvGRU cells: <em>small_gru</em> (1×1 conv, narrow RF) and <em>large_gru</em> (3×3 conv, wider RF), mixed by spatial attention <code>att</code>. Adaptive receptive field per pixel.</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">📏</span>
+            <span class="sub-block-text"><strong>DispHead</strong> — Conv2d + ReLU, then 2 × EdgeNextConvEncoder (DWConv 7×7, expansion×4), Conv2d → Δdisp (1ch). Predicts the additive disparity update.</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">🧮</span>
+            <span class="sub-block-text"><strong>Mask head</strong> — 2 × Conv2d → 32ch. Produces per-pixel upsampling weights used in Block 9.</span>
+          </div>
+        </div>
+        <div class="pipe-cost">
+          <div class="cost-label">Estimated compute share (×8 iters total)</div>
+          <div class="cost-bar-wrap"><div class="cost-bar cost-med" style="width:13%"></div></div>
+          <div class="cost-pct">~10–15% total (cheap per iter, accumulates over iterations)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 9 -->
+    <div class="pipe-step">
+      <div class="pipe-connector">
+        <div class="pipe-dot"></div>
+        <div class="pipe-line last"></div>
+      </div>
+      <div class="pipe-card">
+        <div class="pipe-header">
+          <div>
+            <div class="pipe-num">Block 9</div>
+            <div class="pipe-name">Disparity Upsampling</div>
+          </div>
+          <span class="pipe-file">core/foundation_stereo.py · upsample_disp</span>
+        </div>
+        <div class="pipe-shapes">
+          <span class="shape-tag">(B, 1, H/4, W/4)</span>
+          <span class="arrow-tag">→</span>
+          <span class="shape-tag">(B, 1, H, W)</span>
+        </div>
+        <div class="sub-blocks">
+          <div class="sub-block">
+            <span class="sub-block-icon">🔼</span>
+            <span class="sub-block-text"><strong>stem_2x</strong> — a 2-layer Conv2d branch (<code>stem_2</code>) produces 32ch features at H/2 × W/2 directly from the input image. Gives high-resolution texture cues.</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">⬆</span>
+            <span class="sub-block-text"><strong>Conv2x deconv</strong> (<code>spx_2_gru</code>) — upsample mask_feat_4 (32ch, H/4) with stem_2x (32ch, H/2) → 64ch at H/2. Then ConvTranspose2d → 9ch at full resolution.</span>
+          </div>
+          <div class="sub-block">
+            <span class="sub-block-icon">🎨</span>
+            <span class="sub-block-text"><strong>context_upsample</strong> — the 9 channels are per-pixel soft weights for a 3×3 neighbourhood of the disparity map. Weighted sum produces sharp, edge-aware upsampled disparity at full H × W.</span>
+          </div>
+        </div>
+        <div class="pipe-cost">
+          <div class="cost-label">Estimated compute share</div>
+          <div class="cost-bar-wrap"><div class="cost-bar cost-tiny" style="width:1%"></div></div>
+          <div class="cost-pct">~1%</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /pipeline -->
+
+  <!-- Performance table -->
+  <div class="section-title">
+    <div class="icon">⏱</div>
+    Relative Processing Cost (480×640, max_disp=192, iters=8)
+  </div>
+
+  <div class="warn-box">
+    <div class="warn-title">⚠ Note on measurements</div>
+    The training job <code>finetune_faro.py</code> is currently occupying the GPU (~14.9 GiB / 16 GiB), preventing live profiling.
+    Estimates below are derived from code analysis (op counts, tensor sizes, kernel types) and the partial CUDA kernel profiler output obtained before OOM.
+  </div>
+
+  <div class="perf-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Block</th>
+          <th>Type</th>
+          <th>Calls/forward</th>
+          <th>Relative cost</th>
+          <th>Visual</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="rank-1">
+          <td>4</td>
+          <td>Hourglass Cost Aggregation</td>
+          <td>3D Conv enc-dec + Transformer</td>
+          <td>1×</td>
+          <td>50–60%</td>
+          <td><div class="mini-bar-wrap"><div class="mini-bar cost-high" style="width:100%"></div></div></td>
+        </tr>
+        <tr class="rank-2">
+          <td>1</td>
+          <td>Feature Extraction</td>
+          <td>2D Conv (EdgeNeXt + FPN)</td>
+          <td>1× (both images)</td>
+          <td>10–15%</td>
+          <td><div class="mini-bar-wrap"><div class="mini-bar cost-med" style="width:25%"></div></div></td>
+        </tr>
+        <tr class="rank-2">
+          <td>2</td>
+          <td>Cost Volume Construction</td>
+          <td>GWC + concat, O(D·H·W)</td>
+          <td>1×</td>
+          <td>10–15%</td>
+          <td><div class="mini-bar-wrap"><div class="mini-bar cost-med" style="width:25%"></div></div></td>
+        </tr>
+        <tr class="rank-2">
+          <td>8</td>
+          <td>GRU Update Block</td>
+          <td>2D Conv + ConvGRU</td>
+          <td>8× (one per iter)</td>
+          <td>10–15%</td>
+          <td><div class="mini-bar-wrap"><div class="mini-bar cost-med" style="width:25%"></div></div></td>
+        </tr>
+        <tr class="rank-3">
+          <td>7</td>
+          <td>Geo Encoding Volume lookup</td>
+          <td>Bilinear sampling</td>
+          <td>8× (one per iter)</td>
+          <td>5–8%</td>
+          <td><div class="mini-bar-wrap"><div class="mini-bar cost-low" style="width:13%"></div></div></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Cost Volume Stem</td>
+          <td>3D Conv + ResNet</td>
+          <td>1×</td>
+          <td>~3%</td>
+          <td><div class="mini-bar-wrap"><div class="mini-bar cost-low" style="width:6%"></div></div></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Classifier + Soft-argmax</td>
+          <td>3D Conv (small)</td>
+          <td>1×</td>
+          <td>~2%</td>
+          <td><div class="mini-bar-wrap"><div class="mini-bar cost-tiny" style="width:4%"></div></div></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>Context Network + CAM/SAM</td>
+          <td>2D Conv (tiny)</td>
+          <td>1×</td>
+          <td>~1%</td>
+          <td><div class="mini-bar-wrap"><div class="mini-bar cost-tiny" style="width:2%"></div></div></td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>Disparity Upsampling</td>
+          <td>2D ConvTranspose + softmax</td>
+          <td>1× (test) / N× (train)</td>
+          <td>~1%</td>
+          <td><div class="mini-bar-wrap"><div class="mini-bar cost-tiny" style="width:2%"></div></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Optimisation hints -->
+  <div class="section-title">
+    <div class="icon">🚀</div>
+    Optimisation Targets
+  </div>
+
+  <div class="info-box">
+    <div class="info-title">Highest-impact targets for speed improvement</div>
+    <ul style="margin-top:10px; padding-left:20px; line-height:2.0; color: var(--muted);">
+      <li><strong style="color:var(--red)">Block 4 — Hourglass (50–60%):</strong> Reduce number of hourglass levels, decrease <code>volume_dim</code> (default 28), reduce Transformer depth (<code>num_transformer=4</code>), use half-precision 3D convolutions, or replace 3D convs with 2D factorized convs.</li>
+      <li><strong style="color:var(--yellow)">Block 2 — Cost Volume (10–15%):</strong> Reduce <code>max_disp</code> or use the Triton-optimised kernel (<code>optimize_build_volume='triton'</code>). Lower <code>cv_group</code> (default 8) reduces GWC channels.</li>
+      <li><strong style="color:var(--yellow)">Block 8 — GRU Iterations (10–15%):</strong> Reduce <code>valid_iters</code> from 8 to 4–6. Quality vs. speed tradeoff. Hierarchical inference (<code>run_hierachical</code>) can help for high-res inputs.</li>
+      <li><strong style="color:#60a5fa">Block 1 — Feature Extraction (10–15%):</strong> Switch to a smaller EdgeNeXt variant or prune the FPN deconv layers. Already shared between left/right via batch trick.</li>
+    </ul>
+  </div>
+
+</main>
+
+<footer>
+  FastFoundationStereo Architecture Report — generated 2026-03-24 &nbsp;|&nbsp; Fast-FoundationStereo project
+</footer>
+
+</body>
+</html>

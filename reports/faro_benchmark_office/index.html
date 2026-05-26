@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Depth Quality Report — rs-enhanced-depth</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5;
+            color: #222; max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+    h1 { font-size: 1.8em; color: #1a2e4a; margin-bottom: 4px; }
+    .subtitle { color: #555; font-size: .95em; margin-bottom: 8px; }
+    h2 { font-size: 1.15em; color: #1a2e4a; border-bottom: 2px solid #0f3460;
+          padding-bottom: 6px; margin-bottom: 16px; }
+    .meta { background: white; border-radius: 10px; padding: 16px 20px;
+             margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+    .meta table { border-collapse: collapse; width: 100%; font-size: .9em; }
+    .meta td { padding: 5px 12px; }
+    .meta tr:nth-child(even) { background: #f5f7fa; }
+    .section { background: white; border-radius: 10px; padding: 20px 24px;
+                margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+    .figure-wrapper { text-align: center; }
+    .figure-wrapper img { max-width: 100%; height: auto;
+                           border: 1px solid #e0e0e0; border-radius: 6px; }
+    .caption { font-size: .83em; color: #666; margin-top: 10px; }
+    .legend { background: #e8f4fd; border: 1px solid #b3d7f0; border-radius: 10px;
+               padding: 18px 22px; margin-bottom: 24px; }
+    .legend h3 { font-size: 1em; color: #1a5276; margin-bottom: 10px; }
+    .legend table { border-collapse: collapse; width: 100%; font-size: .85em; }
+    .legend td { padding: 5px 10px; vertical-align: top; }
+    .legend td:first-child { white-space: nowrap; width: 110px; }
+    .legend tr:nth-child(even) { background: rgba(255,255,255,.5); }
+    footer { text-align: center; color: #999; font-size: .8em; padding: 24px 0 8px; }
+    .pdf-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: #0f3460; color: white; border: none; border-radius: 7px;
+      padding: 9px 20px; font-size: .95em; font-weight: 600; cursor: pointer;
+      margin: 12px 0 20px; text-decoration: none; transition: background .15s;
+    }
+    .pdf-btn:hover { background: #16213e; }
+    @media print {
+      .pdf-btn { display: none; }
+      body { background: white; padding: 0; }
+      .section { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+      .meta { box-shadow: none; border: 1px solid #ddd; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Depth Quality Report</h1>
+  <p class="subtitle">rs-enhanced-depth — multi-method depth quality analysis</p>
+  <button class="pdf-btn" onclick="window.print()">&#x1F4E5; Export as PDF</button>
+  <div class="meta"><table><tr><td><b>Source</b></td><td>FARO dataset (/mnt/algonas/Local/Data/Stereo/Faro/FARO_DATA_BASE)</td></tr><tr><td><b>Frames</b></td><td>445</td></tr><tr><td><b>Resolution</b></td><td>1280×720</td></tr><tr><td><b>Ground truth</b></td><td>FARO GT</td></tr><tr><td><b>Methods evaluated</b></td><td>FARO GT, Fine-tuned on FARO, Original model</td></tr><tr><td><b>Generated</b></td><td>2026-04-12 14:19:16</td></tr></table></div>
+
+    <div class="section">
+      <h2>Model Configuration</h2>
+      <table style="border-collapse:collapse;width:100%;font-size:.9em;">
+        <tr style="background:#2c3e50;color:white;font-weight:bold;"><td style="padding:6px 12px;">Method</td><td style="padding:6px 12px;">max_disp</td><td style="padding:6px 12px;">valid_iters</td><td style="padding:6px 12px;">Engine Resolution</td><td style="padding:6px 12px;">Engine Dir</td></tr>
+        <tr><td style="padding:6px 12px;">Original model</td><td style="padding:6px 12px;">—</td><td style="padding:6px 12px;">—</td><td style="padding:6px 12px;">—</td><td style="padding:6px 12px;font-size:.8em;">—</td></tr>
+        <tr><td style="padding:6px 12px;">Fine-tuned on FARO</td><td style="padding:6px 12px;">—</td><td style="padding:6px 12px;">—</td><td style="padding:6px 12px;">—</td><td style="padding:6px 12px;font-size:.8em;">—</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Depth Comparison</h2>
+      <div class="figure-wrapper">
+        <img src="depth_comparison.png" alt="Depth Comparison">
+        <p class="caption">Side-by-side depth maps from a single representative frame. Invalid pixels are black.</p>
+      </div>
+    </div>
+    <div class="section">
+      <h2>Error Maps</h2>
+      <div class="figure-wrapper">
+        <img src="error_maps.png" alt="Error Maps">
+        <p class="caption">Per-pixel absolute error |pred − GT| clipped at 0.5 m. Brighter = more error.</p>
+      </div>
+    </div>
+    <div class="section">
+      <h2>Coverage Heatmaps</h2>
+      <div class="figure-wrapper">
+        <img src="coverage_heatmaps.png" alt="Coverage Heatmaps">
+        <p class="caption">Fraction of frames each pixel has valid depth, averaged over all benchmark frames.</p>
+      </div>
+    </div>
+    <div class="section">
+      <h2>Distance Error Curve</h2>
+      <div class="figure-wrapper">
+        <img src="distance_error_curve.png" alt="Distance Error Curve">
+        <p class="caption">Mean Absolute Error (MAE) broken down by distance range.</p>
+      </div>
+    </div>
+    <div class="section">
+      <h2>Error Histograms</h2>
+      <div class="figure-wrapper">
+        <img src="error_histograms.png" alt="Error Histograms">
+        <p class="caption">Distribution of per-pixel absolute errors from the stored visualisation frames.</p>
+      </div>
+    </div>
+    <div class="section">
+      <h2>Summary Table</h2>
+      <div class="figure-wrapper">
+        <img src="summary_table.png" alt="Summary Table">
+        <p class="caption">Aggregate quality metrics — see legend below the table for column explanations.</p>
+      </div>
+    </div>
+    <div class="legend">
+      <h3>How to Read the Summary Table</h3>
+      <table>
+        <tr><td><b>MRE* (%%)</b></td>
+            <td><b>Overall score (recommended).</b> Mean Relative Error with hole penalty &mdash; pixels where the method has no depth but ground truth does count as 100%% error. This is the fairest single metric because it penalises both inaccuracy and missing coverage. <b>Lower is better.</b></td></tr>
+        <tr><td><b>MRE (%%)</b></td>
+            <td>Mean Relative Error over valid pixels only (holes ignored). 5%% means each measured pixel is ~5%% off on average. <b>Lower is better.</b></td></tr>
+        <tr><td><b>MAE (m)</b></td>
+            <td>Mean Absolute Error in meters, valid pixels only. <b>Lower is better.</b></td></tr>
+        <tr><td><b>&delta;1 (%%)</b></td>
+            <td>Percentage of valid pixels within 1.25&times; of ground truth depth. <b>Higher is better.</b> 100%% is perfect.</td></tr>
+        <tr><td><b>Coverage (%%)</b></td>
+            <td>Percentage of pixels that produced valid depth. <b>Higher is better.</b> MinZ improves this at close range (&lt;0.55m) by filling holes the hardware camera cannot see.</td></tr>
+        <tr><td><b>FPS</b></td>
+            <td>Processing speed (frames per second). <b>Higher is faster.</b></td></tr>
+        <tr><td><b>GT?</b></td>
+            <td>&starf; GT marks the ground truth method (NNDepth accurate). Its error columns show "&mdash;" because you don't compare ground truth to itself.</td></tr>
+      </table>
+    </div>
+    <div class="section">
+      <h2>Close Range Analysis</h2>
+      <div class="figure-wrapper">
+        <img src="close_range_analysis.png" alt="Close Range Analysis">
+        <p class="caption">Coverage and stability for objects closer than 0.55 m. Highlights MinZ benefit.</p>
+      </div>
+    </div>
+    <div class="section">
+      <h2>Timing Bars</h2>
+      <div class="figure-wrapper">
+        <img src="timing_bars.png" alt="Timing Bars">
+        <p class="caption">Processing speed in FPS. Hardware baseline is fixed at ~30 FPS (camera frame rate).</p>
+      </div>
+    </div>
+  <footer>Generated by <code>tests/depth_report/</code> on 2026-04-12 14:19:16</footer>
+</body>
+</html>

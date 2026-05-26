@@ -1,0 +1,4 @@
+focal_px=901.0471
+baseline_m=0.054903
+source=FARO DA_RGB_Kitchen_1 frame 100
+resolution=1280x720

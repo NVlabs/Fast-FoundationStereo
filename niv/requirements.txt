@@ -1,0 +1,7 @@
+torch>=2.0          # install from https://pytorch.org with your CUDA version
+numpy
+timm
+opencv-python
+pyyaml
+matplotlib
+scipy               # only needed if passing .mat files via --left/--right/--depth
