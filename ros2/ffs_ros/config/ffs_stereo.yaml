@@ -1,0 +1,32 @@
+/**:
+  ros__parameters:
+    # Directory containing the TensorRT engine(s) + onnx.yaml.
+    # Single-engine route: fast_foundationstereo.engine
+    # Two-engine route:    feature_runner.engine + post_runner.engine
+    engine_dir: ""
+
+    # Input topics (rectified stereo pair). Defaults match zed-ros2-wrapper
+    # with camera_name 'zed'; the launch file overrides them from camera_name.
+    left_image_topic: "/zed/zed_node/left/image_rect_color"
+    right_image_topic: "/zed/zed_node/right/image_rect_color"
+    left_camera_info_topic: "/zed/zed_node/left/camera_info"
+    right_camera_info_topic: "/zed/zed_node/right/camera_info"
+
+    # Output topics ("~/" = private, i.e. /ffs_stereo/...).
+    depth_topic: "~/depth/image_rect"
+    depth_camera_info_topic: "~/depth/camera_info"
+    publish_disparity: false
+    disparity_topic: "~/disparity/image"
+
+    # Calibration overrides. Leave 0.0 to derive fx from the left CameraInfo
+    # projection matrix and the baseline from the right CameraInfo
+    # (baseline = -P[3] / P[0], the standard rectified-stereo convention).
+    fx: 0.0
+    baseline_m: 0.0
+
+    # Depth values above this (meters) are set to NaN; 0.0 disables the clamp.
+    # Invalid pixels (no correspondence / zero disparity) are always NaN.
+    max_depth: 0.0
+
+    # ApproximateTime synchronizer queue for the left/right image pair.
+    sync_queue_size: 10

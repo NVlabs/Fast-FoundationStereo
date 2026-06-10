@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>ffs_ros</name>
+  <version>0.1.0</version>
+  <description>
+    ROS 2 wrapper around the Fast-FoundationStereo TensorRT C++ runtime:
+    subscribes to rectified stereo pairs (e.g. from the zed-ros2-wrapper)
+    and publishes metric depth as sensor_msgs/Image.
+  </description>
+  <maintainer email="bolun@faunarobotics.com">Bolun</maintainer>
+  <license file="../../LICENSE.txt">NVIDIA Source Code License</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>message_filters</depend>
+
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

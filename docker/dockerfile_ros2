@@ -1,0 +1,59 @@
+# Runtime image for the Fast-FoundationStereo ROS 2 stereo depth pipeline.
+#
+# Contains: CUDA 12.4, TensorRT 10 (runtime + ONNX parser + C++ headers +
+# trtexec), OpenCV, ROS 2 Humble, and the prebuilt ffs_ros workspace
+# (ffs_stereo_node + the cpp/ engine-builder tools).
+#
+# Build from the repo root:
+#   docker build --network host -t ffs_ros2 -f docker/dockerfile_ros2 .
+#
+# Note: this image does NOT ship the Python/PyTorch stack. Export the plugin
+# ONNX with docker/dockerfile_cpp (or any python env), then build the TRT
+# engine inside THIS image on the deployment GPU so the TensorRT versions and
+# GPU architecture match:
+#   ros2 run ffs_ros ffs_build_single_engine <model.onnx> <model.engine>
+
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=US/Pacific
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# Build tools, TensorRT 10 dev packages (same set as docker/dockerfile_cpp), OpenCV.
+RUN apt-get update --fix-missing && \
+    apt-get install -y apt-utils build-essential ca-certificates cmake curl git gnupg2 \
+      locales lsb-release pkg-config software-properties-common wget \
+      libnvinfer10 libnvinfer-dev libnvinfer-plugin10 libnvinfer-plugin-dev \
+      libnvonnxparsers10 libnvonnxparsers-dev libnvinfer-dispatch10 libnvinfer-bin \
+      libopencv-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN locale-gen en_US en_US.UTF-8 && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+ENV LANG=en_US.UTF-8
+
+# ROS 2 Humble (Ubuntu 22.04 / Jammy).
+RUN add-apt-repository universe && \
+    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+      -o /usr/share/keyrings/ros-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" \
+      > /etc/apt/sources.list.d/ros2.list && \
+    apt-get update && \
+    apt-get install -y ros-humble-ros-base ros-humble-cv-bridge ros-humble-message-filters \
+      ros-humble-image-transport ros-humble-depth-image-proc \
+      python3-colcon-common-extensions && \
+    rm -rf /var/lib/apt/lists/*
+
+# CUDA SM architectures baked into the cpp/ kernels (cpp/CMakeLists.txt default
+# covers Ampere..Hopper). Override for other GPUs, e.g. Jetson Orin: "87".
+ARG FFS_CUDA_ARCHS="80;86;89;90"
+
+COPY . /opt/ffs
+WORKDIR /opt/ffs/ros2
+SHELL ["/bin/bash", "-c"]
+RUN source /opt/ros/humble/setup.bash && \
+    colcon build --event-handlers console_direct+ \
+      --cmake-args -DCMAKE_BUILD_TYPE=Release "-DCMAKE_CUDA_ARCHITECTURES=${FFS_CUDA_ARCHS}"
+
+RUN chmod +x /opt/ffs/docker/ros2_entrypoint.sh
+ENTRYPOINT ["/opt/ffs/docker/ros2_entrypoint.sh"]
+CMD ["bash"]

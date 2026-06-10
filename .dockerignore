@@ -1,0 +1,11 @@
+# Keep the docker build context small; nothing below is needed inside images.
+# (Model weights, ONNX files, and engines are mounted at runtime instead.)
+.git
+.venv
+weights/*
+!weights/.gitkeep
+output*/
+assets/
+*.onnx
+*.engine
+*.pth

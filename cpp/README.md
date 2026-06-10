@@ -2,6 +2,8 @@
 
 C++ runtime for Fast-FoundationStereo stereo depth inference on TensorRT.
 
+For a dockerized ROS 2 node that feeds this runtime from a live ZED camera and publishes depth as a ROS topic, see [`ros2/README.md`](../ros2/README.md).
+
 ## Run from inside the C++ Docker container
 
 **All commands in this README are intended to be run from inside the container built from [`docker/dockerfile_cpp`](../docker/dockerfile_cpp).** That image carries the CUDA toolkit, TensorRT 10 runtime + ONNX parser + C++ headers, OpenCV development package, `trtexec`, and a Python environment with PyTorch / ONNX export tooling. The plain `docker/dockerfile` image does **not** ship the C++ TRT headers and will fail to build the C++ targets.

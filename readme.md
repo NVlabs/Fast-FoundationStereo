@@ -200,6 +200,9 @@ To use the two-stage TRT for inference:
 python scripts/run_demo_tensorrt.py --onnx_dir output/ --left_file demo_data/left.png --right_file demo_data/right.png --intrinsic_file demo_data/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --get_pc 1 --zfar 100
 ```
 
+# ROS 2 Live Pipeline (ZED camera)
+A dockerized ROS 2 (Humble) node wraps the [C++ TensorRT runtime](cpp/README.md): it subscribes to the rectified left/right streams of a ZED camera (via [zed-ros2-wrapper](https://github.com/stereolabs/zed-ros2-wrapper)), runs inference on the GPU, and publishes metric depth as a `sensor_msgs/Image` (plus optional disparity). See [ros2/README.md](ros2/README.md) for the end-to-end setup (ONNX export → engine build → camera + node launch).
+
 # Internet-Scale Pseudo-Labeling
 Real-world data offers greater diversity and realism than synthetic data. However, obtaining real stereo images with ground-truth metric depth annotation is notoriously difficult. To address this challenge, we propose an automatic data curation pipeline to generate pseudo-labels on internet-scale stereo images from [Stereo4D](https://stereo4d.github.io/) dataset. **Top:** Pseudo-labeling pipeline on in-the-wild internet stereo data. **Bottom:** Visualization of our generated pseudo-labels.
 
