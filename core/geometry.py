@@ -76,6 +76,7 @@ class Combined_Geo_Encoding_Volume:
             with torch.cuda.amp.autocast(enabled=False):
               corr = torch.einsum('aijk,aijh->ajkh', F.normalize(fmap1.float(), dim=1), F.normalize(fmap2.float(), dim=1))
           else:
-            corr = corr.view(B, H, W1, 1, W2).to(fmap1.dtype)
+            with torch.cuda.amp.autocast(enabled=False):
+              corr = torch.einsum('aijk,aijh->ajkh', fmap1.float(), fmap2.float())
           corr = corr.view(B, H, W1, 1, W2).to(fmap1.dtype)
         return corr
