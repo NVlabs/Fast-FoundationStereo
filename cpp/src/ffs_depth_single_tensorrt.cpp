@@ -286,7 +286,10 @@ void FFSSingleEngineInference::allocateBuffers() {
     cudaMallocChecked(reinterpret_cast<void**>(&d_left_), input_bytes, "d_left_");
     cudaMallocChecked(reinterpret_cast<void**>(&d_right_), input_bytes, "d_right_");
 
-    const size_t disp_bytes = H * W * elementSize(engine_->getTensorDataType("disp"));
+    if (engine_->getTensorDataType("disp") != nvinfer1::DataType::kFLOAT) {
+        throw std::runtime_error("[FFS single] disp tensor must be FP32");
+    }
+    const size_t disp_bytes = H * W * sizeof(float);
     cudaMallocChecked(reinterpret_cast<void**>(&d_disp_), disp_bytes, "d_disp_");
     cudaMallocChecked(reinterpret_cast<void**>(&d_disp_cropped_),
                       H * W * sizeof(float), "d_disp_cropped_");
