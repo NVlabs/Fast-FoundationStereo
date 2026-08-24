@@ -462,6 +462,9 @@ void FFSDepthInference::inferDepth(
     float fx, float baseline_m,
     float* d_depth_out)
 {
+    if (!d_left_rgb || !d_right_rgb || !d_depth_out) {
+        throw std::runtime_error("[FFS] inferDepth: null device pointer");
+    }
     if (input_h <= 0 || input_w <= 0) {
         throw std::runtime_error("[FFS] inferDepth: input dimensions must be positive");
     }
@@ -475,6 +478,7 @@ void FFSDepthInference::inferDepth(
             cudaFree(d_disp_for_depth_);
             d_disp_for_depth_ = nullptr;
         }
+        depth_alloc_pixels_ = 0;
         cudaMallocChecked(reinterpret_cast<void**>(&d_disp_for_depth_),
                           num_pixels * sizeof(float), "d_disp_for_depth_");
         depth_alloc_pixels_ = static_cast<int64_t>(num_pixels);
