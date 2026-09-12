@@ -32,6 +32,14 @@ Stereo foundation models achieve strong zero-shot generalization but remain comp
 docker build --network host -t ffs -f docker/dockerfile .
 bash docker/run_container.sh
 ```
+> [!NOTE]  
+> If using blackwell-series GPU, run 
+> 
+> ```
+> docker build --network host -t ffs -f docker/dockerfile-cu128 .
+> ``` 
+> 
+> instead. 
 
 - Option 2: pip
 ```bash
