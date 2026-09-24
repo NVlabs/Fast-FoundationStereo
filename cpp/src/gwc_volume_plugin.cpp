@@ -257,6 +257,7 @@ public:
         char const*,
         void const* serialData,
         size_t serialLength) noexcept override {
+        if (serialLength != sizeof(GWCParams)) return nullptr;
         auto* plugin = new FFSGWCVolumePlugin(serialData, serialLength);
         plugin->setPluginNamespace(namespace_.c_str());
         return plugin;
