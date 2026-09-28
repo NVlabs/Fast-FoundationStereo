@@ -274,10 +274,15 @@ class FastFoundationStereo(nn.Module):
 
       padder = InputPadder(image1.shape[-2:], divis_by=32, force_square=False)
       image1, image2, disp_small_up = padder.pad(image1, image2, disp_small_up)
-      disp_small_up += padder._pad[0]
       init_disp = F.interpolate(disp_small_up, scale_factor=0.25, mode='bilinear', align_corners=True) * 0.25   # Init disp will be 1/4
       disp = self.forward(image1, image2, iters=iters, test_mode=test_mode, low_memory=low_memory, init_disp=init_disp)
-      disp = padder.unpad(disp)
+      if test_mode:
+        disp = padder.unpad(disp)
+      else:
+        init_disp, disp_preds = disp
+        init_disp = padder.unpad(init_disp)
+        disp_preds = [padder.unpad(d) for d in disp_preds]
+        disp = (init_disp, disp_preds)
       return disp
 
 FoundationStereoLite = FastFoundationStereo
