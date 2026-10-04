@@ -38,7 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_disp', type=int, default=192, help="max disp of geometry encoding volume")
     parser.add_argument('--low_memory', type=int, default=1, help='reduce memory usage')
     args = parser.parse_args()
-    os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
+    os.makedirs(args.save_path, exist_ok=True)
 
     torch.autograd.set_grad_enabled(False)
 
