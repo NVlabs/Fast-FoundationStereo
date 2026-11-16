@@ -185,6 +185,40 @@ To use the two-stage TRT for inference:
 python scripts/run_demo_tensorrt.py --onnx_dir output/ --left_file demo_data/left.png --right_file demo_data/right.png --intrinsic_file demo_data/K.txt --out_dir output/ --remove_invisible 0 --denoise_cloud 1  --get_pc 1 --zfar 100
 ```
 
+# ExecuTorch
+[ExecuTorch](https://pytorch.org/executorch/), PyTorch's solution for deploying models on devices, can take the whole model through `torch.export`, with no ONNX step and no TensorRT plugin. TensorRT builds engines for the parts it supports, and the Triton GWC kernel runs through ExecuTorch's CUDA backend in the same `.pte` file. The `.pte` runs from Python, and ExecuTorch can also run it from C++ without PyTorch.
+
+Use a separate environment, because this installs newer PyTorch and TensorRT (CUDA 13 builds) than the setup above. It needs Linux, an NVIDIA driver for CUDA 13 (R580 or newer), and a CUDA toolkit with `nvcc` at export time for the CUDA backend:
+```bash
+conda create -n ffs_executorch python=3.12 && conda activate ffs_executorch
+pip install "torch_tensorrt[executorch]"
+pip install -r requirements.txt
+```
+
+Export:
+```bash
+python scripts/make_executorch.py --model_dir weights/23-36-37/model_best_bp2_serialize.pth --save_path output_executorch/ --height 480 --width 640 --valid_iters 8 --max_disp 192
+```
+
+| Flag                | Meaning                                                                  |
+|---------------------|--------------------------------------------------------------------------|
+| `--build_volume`    | `triton` (default): the Triton GWC kernel runs in ExecuTorch's CUDA backend. `pytorch1`: plain PyTorch cost volume, TensorRT runs the whole model |
+| `--mixed_precision` | `0` (default): FP32, matches PyTorch closely. `1`: FP16 where the PyTorch model uses autocast; faster, but on the demo pair about 0.03% of pixels are off by more than 1 px (up to 9 px) |
+
+`--model_dir`, `--save_path`, `--height`, `--width`, `--valid_iters` and `--max_disp` work as for `make_single_onnx.py`.
+
+Run on the demo pair, and compare with the PyTorch model:
+```bash
+python scripts/run_demo_executorch.py --model_dir output_executorch/ --left_file demo_data/left.png --right_file demo_data/right.png --out_dir output_demo_executorch/ --compare_model_dir weights/23-36-37/model_best_bp2_serialize.pth
+```
+
+**Notes:**
+- The program takes raw RGB images in 0-255, like `run_demo.py`. Normalization stays inside the model.
+- The TensorRT engines and the CUDA backend's kernel are built for the GPU and versions used for export, so export on the same kind of device you run on.
+- The CUDA backend writes `aoti_cuda_blob.ptd` next to the `.pte`. Keep the two files together.
+- To run the `.pte` from C++, see the [Torch-TensorRT ExecuTorch guide](https://docs.pytorch.org/TensorRT/user_guide/runtime_performance/executorch.html).
+
+
 # Internet-Scale Pseudo-Labeling
 Real-world data offers greater diversity and realism than synthetic data. However, obtaining real stereo images with ground-truth metric depth annotation is notoriously difficult. To address this challenge, we propose an automatic data curation pipeline to generate pseudo-labels on internet-scale stereo images from [Stereo4D](https://stereo4d.github.io/) dataset. **Top:** Pseudo-labeling pipeline on in-the-wild internet stereo data. **Bottom:** Visualization of our generated pseudo-labels.
 
