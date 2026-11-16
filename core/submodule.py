@@ -440,8 +440,10 @@ if triton is not None and torch.cuda.is_available():
     out_ptrs = out_ptr + bh*stride_on + g*stride_og + d_off[:, None]*stride_od + w_off[None, :]*stride_ow
     tl.store(out_ptrs, acc, mask=w_mask[None, :])
 
+# A torch.library op, so torch.export can record the kernel (it fails on a raw Triton launch).
 @torch.no_grad()
-def build_gwc_volume_triton(refimg_fea: torch.Tensor, targetimg_fea: torch.Tensor, maxdisp: int, num_groups: int, normalize=True):
+@torch.library.triton_op("ffs::gwc_volume", mutates_args=())
+def build_gwc_volume_triton(refimg_fea: torch.Tensor, targetimg_fea: torch.Tensor, maxdisp: int, num_groups: int, normalize: bool = True) -> torch.Tensor:
   if triton is None:
     raise RuntimeError('Triton is not available. Please install triton to use build_gwc_volume_triton.')
   B, C, H, W = refimg_fea.shape
@@ -467,12 +469,12 @@ def build_gwc_volume_triton(refimg_fea: torch.Tensor, targetimg_fea: torch.Tenso
   BH = B * H
   D_eff = min(maxdisp, W)
   grid = lambda META: (BH * num_groups, triton.cdiv(D_eff, META['BLOCK_D']), triton.cdiv(W, META['BLOCK_W']))
-  _gwc_triton_kernel[grid](ref_bhwc, tar_bhwc, ref_norm, tar_norm, out_bhw, BH, C, W, D_eff, num_groups, K,
-                           ref_bhwc.stride(0), ref_bhwc.stride(1), ref_bhwc.stride(2),
-                           tar_bhwc.stride(0), tar_bhwc.stride(1), tar_bhwc.stride(2),
-                           ref_norm.stride(0), ref_norm.stride(1), ref_norm.stride(2),
-                           out_bhw.stride(0), out_bhw.stride(1), out_bhw.stride(2), out_bhw.stride(3),
-                           NORMALIZE=normalize)
+  torch.library.wrap_triton(_gwc_triton_kernel)[grid](ref_bhwc, tar_bhwc, ref_norm, tar_norm, out_bhw, BH, C, W, D_eff, num_groups, K,
+                                                      ref_bhwc.stride(0), ref_bhwc.stride(1), ref_bhwc.stride(2),
+                                                      tar_bhwc.stride(0), tar_bhwc.stride(1), tar_bhwc.stride(2),
+                                                      ref_norm.stride(0), ref_norm.stride(1), ref_norm.stride(2),
+                                                      out_bhw.stride(0), out_bhw.stride(1), out_bhw.stride(2), out_bhw.stride(3),
+                                                      NORMALIZE=normalize)
   if D_eff < maxdisp: out_bhw[:, :, D_eff:, :] = 0
   volume = out_bhw.view(B, H, num_groups, maxdisp, W).permute(0, 2, 3, 1, 4).contiguous()
   return volume
